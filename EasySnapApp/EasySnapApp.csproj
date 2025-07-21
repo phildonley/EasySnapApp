@@ -1,0 +1,119 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+
+	<PropertyGroup>
+		<!-- WinExe on .NET Framework 4.7.2 with WPF -->
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net472</TargetFramework>
+		<UseWPF>true</UseWPF>
+		<!-- Enable modern C# (9.0) -->
+		<LangVersion>9.0</LangVersion>
+		<!-- We ship our own AssemblyInfo -->
+		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+		<!-- We manually list all XAML and code items -->
+		<EnableDefaultPageItems>false</EnableDefaultPageItems>
+		<EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <None Remove="Views\TestWindow.xaml" />
+	</ItemGroup>
+
+	<!-- WPF Pages and their code-behind -->
+	<ItemGroup>
+		<!-- Application Definition -->
+		<Page Include="App.xaml">
+			<Generator>MSBuild:Compile</Generator>
+			<SubType>Designer</SubType>
+		</Page>
+		<Compile Include="App.xaml.cs">
+			<DependentUpon>App.xaml</DependentUpon>
+		</Compile>
+		<Compile Include="Views\DeviceSettingsWindow.xaml.cs" />
+		<Compile Include="Views\TestWindow.xaml.cs" />
+
+		<!-- Main Window -->
+		<Page Include="MainWindow.xaml">
+			<Generator>MSBuild:Compile</Generator>
+			<SubType>Designer</SubType>
+		</Page>
+		<Compile Include="MainWindow.xaml.cs">
+			<DependentUpon>MainWindow.xaml</DependentUpon>
+		</Compile>
+
+		<!-- Settings Window -->
+
+		<!-- Calibration Dialog -->
+		<Page Include="Views\CalibrationDialog.xaml">
+			<Generator>MSBuild:Compile</Generator>
+			<SubType>Designer</SubType>
+		</Page>
+		<Compile Include="Views\CalibrationDialog.xaml.cs">
+			<DependentUpon>CalibrationDialog.xaml</DependentUpon>
+		</Compile>
+		<Page Include="Views\DeviceSettingsWindow.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</Page>
+
+		<!-- Stage Settings Dialog -->
+		<Page Include="Views\StageSettingsDialog.xaml">
+			<Generator>MSBuild:Compile</Generator>
+			<SubType>Designer</SubType>
+		</Page>
+		<Page Include="Views\TestWindow.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</Page>
+		<Compile Include="Views\StageSettingsDialog.xaml.cs">
+			<DependentUpon>StageSettingsDialog.xaml</DependentUpon>
+		</Compile>
+
+		<!-- Stage Settings (non-XAML) -->
+		<Compile Include="Views\StageSettings.cs" />
+	</ItemGroup>
+
+	<!-- Core C# code files -->
+	<ItemGroup>
+		<Compile Include="IsExternalInit.cs" />
+		<Compile Include="Models\CalibrationData.cs" />
+		<Compile Include="Models\ScanResult.cs" />
+		<Compile Include="Utils\CsvWriter.cs" />
+		<Compile Include="Services\BarcodeScannerService.cs" />
+		<Compile Include="Services\ScaleService.cs" />
+		<Compile Include="Services\CanonCameraService.cs" />
+		<Compile Include="Services\KinectService.cs" />
+		<Compile Include="Services\ScanSessionManager.cs" />
+		<Compile Include="Services\ThermalScannerService.cs" />
+		<Compile Include="Services\IntelIntellisenseService.cs" />
+		<Compile Include="Services\LaserArrayService.cs" />
+	</ItemGroup>
+
+	<!-- Settings file generation -->
+	<ItemGroup>
+		<None Update="Properties\Settings.settings">
+			<Generator>SettingsSingleFileGenerator</Generator>
+			<LastGenOutput>Settings.Designer.cs</LastGenOutput>
+		</None>
+		<Compile Include="Properties\Settings.Designer.cs">
+			<DependentUpon>Settings.settings</DependentUpon>
+			<DesignTimeSharedInput>True</DesignTimeSharedInput>
+			<AutoGen>True</AutoGen>
+		</Compile>
+	</ItemGroup>
+
+	<!-- NuGet packages -->
+	<ItemGroup>
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+	</ItemGroup>
+
+	<!-- Embedded resources -->
+	<ItemGroup>
+		<Resource Include="Assets\placeholder.jpg" />
+	</ItemGroup>
+
+	<!-- Kinect SDK reference -->
+	<ItemGroup>
+		<Reference Include="Microsoft.Kinect, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35">
+			<HintPath>C:\Program Files\Microsoft SDKs\Kinect\v2.0_1409\Assemblies\Microsoft.Kinect.dll</HintPath>
+		</Reference>
+	</ItemGroup>
+
+</Project>

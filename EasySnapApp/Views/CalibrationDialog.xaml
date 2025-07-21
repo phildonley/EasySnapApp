@@ -1,0 +1,93 @@
+﻿<Window x:Class="EasySnapApp.Views.CalibrationDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="3D Camera Calibration"
+        Height="600" Width="800"
+        Background="#1E1E22" Foreground="#F0F0F0"
+        FontFamily="Segoe UI" FontSize="13">
+    <Grid Margin="12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="3*" />
+            <ColumnDefinition Width="2*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- LEFT: Live Depth + Overlay -->
+        <Border Grid.Column="0"
+                BorderBrush="#444" BorderThickness="1"
+                CornerRadius="6" Background="#2A2A2E"
+                HorizontalAlignment="Center" VerticalAlignment="Center">
+            <!-- We’ll size this Grid in code to match the WriteableBitmap -->
+            <Grid x:Name="CalibrationPreviewContainer">
+                <Image x:Name="CalibrationDepthImage"
+                       Stretch="None"/>
+                <Canvas x:Name="CalibrationOverlayCanvas"
+                        Background="Transparent"
+                        IsHitTestVisible="False">
+                    <Rectangle x:Name="CalibrationBoxOverlay"
+                               Stroke="#FFFFA0"
+                               StrokeThickness="2"
+                               Visibility="Collapsed"/>
+                </Canvas>
+            </Grid>
+        </Border>
+
+        <!-- Right: Calibration Steps & Inputs -->
+        <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Top">
+            <TextBlock Text="Calibration Steps"
+                 FontWeight="Bold" FontSize="16"
+                 Margin="0,0,0,12"/>
+
+            <!-- 1) Capture background -->
+            <Button x:Name="CaptureBackgroundButton"
+              Content="1. Capture Background"
+              Margin="0,0,0,8"/>
+
+            <TextBlock Text="Place a box of known dimensions centered in the stage."
+                 TextWrapping="Wrap" Margin="0,0,0,12"/>
+
+            <!-- Real Dimensions Input -->
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                <TextBlock Text="Real Length (in):"
+                   Width="110" VerticalAlignment="Center"/>
+                <TextBox x:Name="RealLengthBox"
+                 Width="60" Margin="4,0"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                <TextBlock Text="Real Width (in):"
+                   Width="110" VerticalAlignment="Center"/>
+                <TextBox x:Name="RealWidthBox"
+                 Width="60" Margin="4,0"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                <TextBlock Text="Real Height (in):"
+                   Width="110" VerticalAlignment="Center"/>
+                <TextBox x:Name="RealHeightBox"
+                 Width="60" Margin="4,0"/>
+            </StackPanel>
+
+            <!-- 2) Measure box and display -->
+            <Button x:Name="MeasureBoxButton"
+              Content="2. Measure Box"
+              Margin="0,8,0,8"/>
+            <TextBlock x:Name="MeasuredLabel"
+                 Text="Measured: L=0, W=0, H=0"
+                 FontSize="14" Foreground="#D0D0A0"
+                 Margin="0,0,0,12"/>
+
+            <Separator Margin="0,8,0,8"/>
+
+            <!-- OK / Cancel -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="OKButton"
+                Content="OK"
+                Width="90"
+                Margin="0,0,10,0"
+                Click="OKButton_Click"/>
+                <Button x:Name="CancelButton"
+                Content="Cancel"
+                Width="90"
+                Click="CancelButton_Click"/>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Window>

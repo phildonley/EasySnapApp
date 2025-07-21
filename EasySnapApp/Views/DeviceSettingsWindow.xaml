@@ -1,0 +1,57 @@
+﻿<Window x:Class="EasySnapApp.Views.DeviceSettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Device Settings" Height="600" Width="900"
+        Background="#1E1E22" Foreground="#F0F0F0"
+        FontFamily="Segoe UI" FontSize="13">
+    <Grid Margin="12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="200"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <StackPanel Grid.Column="0">
+            <TextBlock Text="Devices"
+                 FontSize="18" FontWeight="Bold"
+                 Foreground="#FAFAFA"
+                 Margin="0,0,0,16"/>
+            <ListBox x:Name="DeviceList"
+               Background="#2A2A2E"
+               Foreground="#F0F0F0"
+               BorderThickness="0"
+               SelectionChanged="DeviceList_SelectionChanged">
+                <ListBoxItem Tag="Measurement" IsSelected="True">Dimension Scanner</ListBoxItem>
+                <ListBoxItem Tag="WebCam">Overhead Camera</ListBoxItem>
+                <ListBoxItem Tag="WebCamSide">Side Camera</ListBoxItem>
+                <ListBoxItem Tag="Kinect">Kinect</ListBoxItem>
+                <ListBoxItem Tag="Thermal">Thermal Scanner</ListBoxItem>
+                <ListBoxItem Tag="Intel">Intel Intellisense</ListBoxItem>
+                <ListBoxItem Tag="Laser">Laser Array</ListBoxItem>
+            </ListBox>
+        </StackPanel>
+
+        <Grid Grid.Column="1" Margin="16,0,0,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <TextBlock x:Name="DeviceTitle"
+                 Grid.Row="0"
+                 FontSize="20" FontWeight="Bold"
+                 Foreground="#FAFAFA"
+                 Text="Dimension Scanner"
+                 Margin="0,0,0,8"/>
+            <TabControl x:Name="ActionTabs"
+                  Grid.Row="1"
+                  Background="#2A2A2E"
+                  Foreground="#F0F0F0"
+                  SelectionChanged="ActionTabs_SelectionChanged">
+                <TabItem Header="Stage Setup">
+                    <ContentControl x:Name="StageContentHost"/>
+                </TabItem>
+                <TabItem Header="Calibration">
+                    <ContentControl x:Name="CalibContentHost"/>
+                </TabItem>
+            </TabControl>
+        </Grid>
+    </Grid>
+</Window>
