@@ -31,21 +31,24 @@
             </MenuItem>
             <MenuItem Header="_Edit"/>
             <MenuItem Header="_Settings">
-                <MenuItem Header="General Settings..." Click="OpenSettings_Click"/>
+                <MenuItem Header="General Settings..." Click="GeneralSettings_Click"/>
                 <Separator/>
-                <MenuItem Header="Stage Setup..." Click="StageSetup_Click"/>
-                <MenuItem Header="Calibrate 3D Camera..." Click="Calibrate3DCamera_Click"/>
-                <Separator/>
-                <MenuItem Header="Test New Window..." Click="OpenTestWindow_Click"/>
+                <MenuItem Header="Measurement Tools..." Click="MeasurementTools_Click"/>
+                <MenuItem Header="Photography Tools..." Click="PhotographyTools_Click"/>
             </MenuItem>
             <MenuItem Header="_Help">
-                <MenuItem Header="About..."
-                          Click="About_Click"/>
+                <MenuItem Header="About..." Click="About_Click"/>
             </MenuItem>
         </Menu>
 
+        <!-- Status Bar -->
         <StatusBar DockPanel.Dock="Bottom" Background="#252526" Foreground="#F0F0F0">
-            <TextBlock x:Name="StatusTextBlock" Text="Ready." />
+            <TextBlock x:Name="StatusTextBlock"
+                       Margin="8,0,0,0"
+                       Foreground="#FF66FF66"
+                       FontWeight="Bold"
+                       FontSize="14"
+                       Text="Ready."/>
         </StatusBar>
 
         <!-- Toolbar -->
