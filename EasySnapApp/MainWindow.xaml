@@ -44,6 +44,10 @@
             </MenuItem>
         </Menu>
 
+        <StatusBar DockPanel.Dock="Bottom" Background="#252526" Foreground="#F0F0F0">
+            <TextBlock x:Name="StatusTextBlock" Text="Ready." />
+        </StatusBar>
+
         <!-- Toolbar -->
         <ToolBar DockPanel.Dock="Top"
                  Background="#222"
