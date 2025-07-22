@@ -1,0 +1,10 @@
+﻿<UserControl x:Class="EasySnapApp.Views.Settings.General.GeneralFileSettingsControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="#23272D" Foreground="#F0F0F0">
+    <StackPanel Margin="16">
+        <TextBlock Text="File Settings" FontWeight="Bold" FontSize="16" Margin="0,0,0,12"/>
+        <TextBlock Text="This is a bare bones sketch of what this General Settings menu looks like."/>
+        <TextBlock Text="File settings: Determine setup of save folders, etc. Setup sequence, CSV export settings, select displayed categories, etc." Margin="0,8,0,0"/>
+    </StackPanel>
+</UserControl>

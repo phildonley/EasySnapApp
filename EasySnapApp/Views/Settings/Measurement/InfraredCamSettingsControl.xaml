@@ -1,0 +1,24 @@
+﻿<UserControl x:Class="EasySnapApp.Views.Settings.Measurement.InfraredCamSettingsControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="#23272D" Foreground="#F0F0F0">
+    <StackPanel Margin="10">
+        <TextBlock Text="3D Infrared Camera Setup" FontWeight="Bold" FontSize="16"/>
+        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+            <TextBlock Text="Device Select:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+            <ComboBox Width="180" Margin="0,0,10,0">
+                <ComboBoxItem Content="Kinect v2" IsSelected="True"/>
+                <ComboBoxItem Content="Intel Intellisense (Placeholder)"/>
+                <ComboBoxItem Content="Add Device..."/>
+            </ComboBox>
+        </StackPanel>
+        <TabControl Margin="0,18,0,0">
+            <TabItem Header="Stage Setup">
+                <TextBlock Text="Stage setup controls and preview here." Margin="10"/>
+            </TabItem>
+            <TabItem Header="Camera Calibration">
+                <TextBlock Text="Calibration controls for Kinect (or selected device) here." Margin="10"/>
+            </TabItem>
+        </TabControl>
+    </StackPanel>
+</UserControl>

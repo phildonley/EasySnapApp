@@ -1,0 +1,10 @@
+﻿<UserControl x:Class="EasySnapApp.Views.Settings.Measurement.LaserArraySettingsControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="#23272D" Foreground="#F0F0F0">
+    <StackPanel Margin="10">
+        <TextBlock Text="Laser Array Setup" FontWeight="Bold" FontSize="16"/>
+        <TextBlock TextWrapping="Wrap" Margin="0,10,0,0"
+            Text="Laser Array Calibration: Placeholder for future device support. Select a connected laser array device and show calibration controls here."/>
+    </StackPanel>
+</UserControl>

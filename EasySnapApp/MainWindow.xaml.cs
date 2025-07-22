@@ -192,6 +192,24 @@ namespace EasySnapApp
                             MessageBoxImage.Information);
         }
 
+        private void GeneralSettings_Click(object sender, RoutedEventArgs e)
+        {
+            StatusTextBlock.Text = "General Settings menu opened (not yet implemented)";
+            // TODO: Open general settings window/dialog
+        }
+
+        private void MeasurementTools_Click(object sender, RoutedEventArgs e)
+        {
+            StatusTextBlock.Text = "Measurement Tools menu opened (not yet implemented)";
+            // TODO: Open measurement tools window/dialog
+        }
+
+        private void PhotographyTools_Click(object sender, RoutedEventArgs e)
+        {
+            StatusTextBlock.Text = "Photography Tools menu opened (not yet implemented)";
+            // TODO: Open photography tools window/dialog
+        }
+
         private void OpenSettings_Click(object sender, RoutedEventArgs e)
         {
             var dlg = new DeviceSettingsWindow(

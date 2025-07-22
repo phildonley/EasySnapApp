@@ -29,6 +29,14 @@
 			<DependentUpon>App.xaml</DependentUpon>
 		</Compile>
 		<Compile Include="Views\DeviceSettingsWindow.xaml.cs" />
+		<Compile Include="Views\GeneralSettingsWindow.xaml.cs" />
+		<Compile Include="Views\MeasurementToolsWindow.xaml.cs" />
+		<Compile Include="Views\Settings\General\GeneralFileSettingsControl.xaml.cs" />
+		<Compile Include="Views\Settings\General\GeneralInterfaceSettingsControl.xaml.cs" />
+		<Compile Include="Views\Settings\Measurement\InfraredCamSettingsControl.xaml.cs" />
+		<Compile Include="Views\Settings\Measurement\LaserArraySettingsControl.xaml.cs" />
+		<Compile Include="Views\Settings\Measurement\MeasurementGeneralSettingsControl.xaml.cs" />
+		<Compile Include="Views\Settings\Measurement\MultiCamSettingsControl.xaml.cs" />
 		<Compile Include="Views\TestWindow.xaml.cs" />
 
 		<!-- Main Window -->
@@ -91,6 +99,30 @@
 		<None Update="Properties\Settings.settings">
 			<Generator>SettingsSingleFileGenerator</Generator>
 			<LastGenOutput>Settings.Designer.cs</LastGenOutput>
+		</None>
+		<None Update="Views\GeneralSettingsWindow.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</None>
+		<None Update="Views\MeasurementToolsWindow.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</None>
+		<None Update="Views\Settings\General\GeneralFileSettingsControl.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</None>
+		<None Update="Views\Settings\General\GeneralInterfaceSettingsControl.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</None>
+		<None Update="Views\Settings\Measurement\InfraredCamSettingsControl.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</None>
+		<None Update="Views\Settings\Measurement\LaserArraySettingsControl.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</None>
+		<None Update="Views\Settings\Measurement\MeasurementGeneralSettingsControl.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</None>
+		<None Update="Views\Settings\Measurement\MultiCamSettingsControl.xaml">
+		  <Generator>MSBuild:Compile</Generator>
 		</None>
 		<Compile Include="Properties\Settings.Designer.cs">
 			<DependentUpon>Settings.settings</DependentUpon>
