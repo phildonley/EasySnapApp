@@ -1,12 +1,23 @@
 ﻿<Window x:Class="EasySnapApp.Views.GeneralSettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:EasySnapApp.Views"
-        mc:Ignorable="d"
-        Title="GeneralSettingsWindow" Height="450" Width="800">
-    <Grid>
-        
+        Title="General Settings"
+        Height="600" Width="900"
+        Background="#1E1E22" Foreground="#F0F0F0"
+        FontFamily="Segoe UI">
+    <Grid Margin="16">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="220"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <!-- Left panel: navigation buttons -->
+        <StackPanel Grid.Column="0" Margin="0,0,18,0">
+            <Button x:Name="BtnFile" Content="File Settings" Click="BtnFile_Click" Margin="0,0,0,10" />
+            <Button x:Name="BtnInterface" Content="Interface" Click="BtnInterface_Click" Margin="0,0,0,10" />
+        </StackPanel>
+        <!-- Right panel: content placeholder -->
+        <Border Grid.Column="1" Background="#23272D" CornerRadius="8">
+            <ContentControl x:Name="RightContent" Margin="14"/>
+        </Border>
     </Grid>
 </Window>

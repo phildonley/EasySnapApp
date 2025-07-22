@@ -15,6 +15,14 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <None Remove="Views\GeneralSettingsWindow.xaml" />
+	  <None Remove="Views\MeasurementToolsWindow.xaml" />
+	  <None Remove="Views\Settings\General\GeneralFileSettingsControl.xaml" />
+	  <None Remove="Views\Settings\General\GeneralInterfaceSettingsControl.xaml" />
+	  <None Remove="Views\Settings\Measurement\InfraredCamSettingsControl.xaml" />
+	  <None Remove="Views\Settings\Measurement\LaserArraySettingsControl.xaml" />
+	  <None Remove="Views\Settings\Measurement\MeasurementGeneralSettingsControl.xaml" />
+	  <None Remove="Views\Settings\Measurement\MultiCamSettingsControl.xaml" />
 	  <None Remove="Views\TestWindow.xaml" />
 	</ItemGroup>
 
@@ -61,6 +69,30 @@
 		<Page Include="Views\DeviceSettingsWindow.xaml">
 		  <Generator>MSBuild:Compile</Generator>
 		</Page>
+		<Page Include="Views\GeneralSettingsWindow.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</Page>
+		<Page Include="Views\MeasurementToolsWindow.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</Page>
+		<Page Include="Views\Settings\General\GeneralFileSettingsControl.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</Page>
+		<Page Include="Views\Settings\General\GeneralInterfaceSettingsControl.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</Page>
+		<Page Include="Views\Settings\Measurement\InfraredCamSettingsControl.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</Page>
+		<Page Include="Views\Settings\Measurement\LaserArraySettingsControl.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</Page>
+		<Page Include="Views\Settings\Measurement\MeasurementGeneralSettingsControl.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</Page>
+		<Page Include="Views\Settings\Measurement\MultiCamSettingsControl.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</Page>
 
 		<!-- Stage Settings Dialog -->
 		<Page Include="Views\StageSettingsDialog.xaml">
@@ -99,30 +131,6 @@
 		<None Update="Properties\Settings.settings">
 			<Generator>SettingsSingleFileGenerator</Generator>
 			<LastGenOutput>Settings.Designer.cs</LastGenOutput>
-		</None>
-		<None Update="Views\GeneralSettingsWindow.xaml">
-		  <Generator>MSBuild:Compile</Generator>
-		</None>
-		<None Update="Views\MeasurementToolsWindow.xaml">
-		  <Generator>MSBuild:Compile</Generator>
-		</None>
-		<None Update="Views\Settings\General\GeneralFileSettingsControl.xaml">
-		  <Generator>MSBuild:Compile</Generator>
-		</None>
-		<None Update="Views\Settings\General\GeneralInterfaceSettingsControl.xaml">
-		  <Generator>MSBuild:Compile</Generator>
-		</None>
-		<None Update="Views\Settings\Measurement\InfraredCamSettingsControl.xaml">
-		  <Generator>MSBuild:Compile</Generator>
-		</None>
-		<None Update="Views\Settings\Measurement\LaserArraySettingsControl.xaml">
-		  <Generator>MSBuild:Compile</Generator>
-		</None>
-		<None Update="Views\Settings\Measurement\MeasurementGeneralSettingsControl.xaml">
-		  <Generator>MSBuild:Compile</Generator>
-		</None>
-		<None Update="Views\Settings\Measurement\MultiCamSettingsControl.xaml">
-		  <Generator>MSBuild:Compile</Generator>
 		</None>
 		<Compile Include="Properties\Settings.Designer.cs">
 			<DependentUpon>Settings.settings</DependentUpon>

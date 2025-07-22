@@ -11,12 +11,12 @@ namespace EasySnapApp.Views
             RightContent.Content = new GeneralFileSettingsControl();
         }
 
-        private void FileSettings_Click(object sender, RoutedEventArgs e)
+        private void BtnFile_Click(object sender, RoutedEventArgs e)
         {
             RightContent.Content = new GeneralFileSettingsControl();
         }
 
-        private void InterfaceSettings_Click(object sender, RoutedEventArgs e)
+        private void BtnInterface_Click(object sender, RoutedEventArgs e)
         {
             RightContent.Content = new GeneralInterfaceSettingsControl();
         }
