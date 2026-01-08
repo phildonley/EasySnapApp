@@ -10,6 +10,8 @@ using System.Windows.Media.Imaging;
 using EasySnapApp.Models;
 using EasySnapApp.Services;
 using EasySnapApp.Views;
+using EasySnapApp.Utils;
+using Microsoft.Win32;
 using Path = System.IO.Path;
 
 namespace EasySnapApp
@@ -221,9 +223,41 @@ namespace EasySnapApp
 
         private void ExportCsvButton_Click(object sender, RoutedEventArgs e)
         {
-            // Compile-safe stub for now.
-            // Next step: wire to Utils/CsvWriter.cs to output one row per part with your required headers.
-            StatusTextBlock.Text = "Export CSV clicked (export wiring next).";
+            if (_results.Count == 0)
+            {
+                StatusTextBlock.Text = "No data to export.";
+                return;
+            }
+
+            var sfd = new SaveFileDialog
+            {
+                Title = "Export CSV (one row per part number)",
+                Filter = "CSV files (*.csv)|*.csv",
+                FileName = $"EasySnap_Export_{DateTime.Now:yyyyMMdd_HHmmss}.csv"
+            };
+
+            if (sfd.ShowDialog() != true)
+                return;
+
+            try
+            {
+                // ONE ROW PER PART NUMBER
+                CsvWriter.ExportOneRowPerPart(
+                    sfd.FileName,
+                    _results,
+                    dimUnit: "in",
+                    volUnit: "",
+                    factor: "166",
+                    siteId: "733"
+                );
+
+                StatusTextBlock.Text = $"Exported CSV: {Path.GetFileName(sfd.FileName)}";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Export failed:\n{ex.Message}", "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                StatusTextBlock.Text = "Export failed.";
+            }
         }
 
         private void LoadPartDataIntoPane(string part)
