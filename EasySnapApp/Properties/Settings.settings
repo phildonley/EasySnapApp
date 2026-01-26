@@ -3,5 +3,36 @@
   <Profiles>
     <Profile Name="(Default)" />
   </Profiles>
-  <Settings />
+  <Settings>
+    <Setting Name="ScaleComPort" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="ExportSiteId" Type="System.String" Scope="User">
+      <Value Profile="(Default)">733</Value>
+    </Setting>
+    <Setting Name="ExportDimUnit" Type="System.String" Scope="User">
+      <Value Profile="(Default)">in</Value>
+    </Setting>
+    <Setting Name="ExportWgtUnit" Type="System.String" Scope="User">
+      <Value Profile="(Default)">lb</Value>
+    </Setting>
+    <Setting Name="ExportVolUnit" Type="System.String" Scope="User">
+      <Value Profile="(Default)">in</Value>
+    </Setting>
+    <Setting Name="ExportFactor" Type="System.String" Scope="User">
+      <Value Profile="(Default)">166</Value>
+    </Setting>
+    <Setting Name="ExportOptInfo2" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Y</Value>
+    </Setting>
+    <Setting Name="ExportOptInfo3" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Y</Value>
+    </Setting>
+    <Setting Name="CameraImageQuality" Type="System.String" Scope="User">
+      <Value Profile="(Default)">JPEG_Large</Value>
+    </Setting>
+    <Setting Name="CameraImageFormat" Type="System.String" Scope="User">
+      <Value Profile="(Default)">JPEG</Value>
+    </Setting>
+  </Settings>
 </SettingsFile>

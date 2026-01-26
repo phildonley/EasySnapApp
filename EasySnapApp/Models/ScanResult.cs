@@ -16,6 +16,8 @@ namespace EasySnapApp.Models
         private double _heightIn;
         private double _weightLb;
         private BitmapImage _thumbnailImage;
+        private string _fullImagePath;  // PHASE 1: Store full path for loading
+        private string _thumbnailPath;  // PHASE 1: Store thumbnail path
         private string _tooltipText;
         private bool _isSelected;
 
@@ -72,6 +74,20 @@ namespace EasySnapApp.Models
         {
             get => _thumbnailImage;
             set { _thumbnailImage = value; OnPropertyChanged(); }
+        }
+
+        // PHASE 1: Full image path for loading
+        public string FullImagePath
+        {
+            get => _fullImagePath;
+            set { _fullImagePath = value; OnPropertyChanged(); }
+        }
+
+        // PHASE 1: Thumbnail path for reference
+        public string ThumbnailPath
+        {
+            get => _thumbnailPath;
+            set { _thumbnailPath = value; OnPropertyChanged(); }
         }
 
         public string TooltipText

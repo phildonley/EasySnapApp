@@ -22,7 +22,7 @@
                 <ListBoxItem Tag="Measurement" IsSelected="True">Dimension Scanner</ListBoxItem>
                 <ListBoxItem Tag="WebCam">Overhead Camera</ListBoxItem>
                 <ListBoxItem Tag="WebCamSide">Side Camera</ListBoxItem>
-                <ListBoxItem Tag="Kinect">Kinect</ListBoxItem>
+
                 <ListBoxItem Tag="Thermal">Thermal Scanner</ListBoxItem>
                 <ListBoxItem Tag="Intel">Intel Intellisense</ListBoxItem>
                 <ListBoxItem Tag="Laser">Laser Array</ListBoxItem>

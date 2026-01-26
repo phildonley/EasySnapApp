@@ -1,0 +1,103 @@
+// Quick test to verify CSV export formatting
+using System;
+using System.Collections.Generic;
+using System.IO;
+using EasySnapApp.Models;
+using EasySnapApp.Utils;
+
+namespace EasySnapApp.Test
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            Console.WriteLine("Testing CSV Export Fixes...");
+            
+            // Set up test settings
+            Properties.Settings.Default.ExportDimUnit = "in";
+            Properties.Settings.Default.ExportWgtUnit = "lb";
+            Properties.Settings.Default.ExportVolUnit = "in";
+            Properties.Settings.Default.ExportSiteId = "733";
+            Properties.Settings.Default.ExportFactor = "166";
+            Properties.Settings.Default.ExportOptInfo2 = "Y";
+            Properties.Settings.Default.ExportOptInfo3 = "Y";
+
+            // Create test data with various decimal scenarios
+            var testResults = new List<ScanResult>
+            {
+                new ScanResult
+                {
+                    PartNumber = "TEST123",
+                    Sequence = 103,
+                    ImageFileName = "TEST123.103.jpg",
+                    TimeStamp = "20250120_143022",
+                    LengthIn = 2.0,        // Should output as "2" 
+                    DepthIn = 2.5,         // Should output as "2.5"
+                    HeightIn = 1.25,       // Should output as "1.25" 
+                    WeightLb = 2.2506      // Should output as "2.2506"
+                },
+                new ScanResult
+                {
+                    PartNumber = "TEST456", 
+                    Sequence = 103,
+                    ImageFileName = "TEST456.103.jpg",
+                    TimeStamp = "20250120_144022",
+                    LengthIn = 3.25064,    // Should round to "3.2506"
+                    DepthIn = 4.25065,     // Should round to "4.2507"
+                    HeightIn = 2.000001,   // Should round to "2"
+                    WeightLb = 1.99999     // Should round to "2"
+                }
+            };
+
+            var logMessages = new List<string>();
+            Action<string> logger = msg => {
+                Console.WriteLine($"LOG: {msg}");
+                logMessages.Add(msg);
+            };
+
+            string outputPath = "test_export.csv";
+            
+            try
+            {
+                CsvWriter.ExportOneRowPerPart(outputPath, testResults, logger);
+                
+                // Read and display the output
+                var lines = File.ReadAllLines(outputPath);
+                Console.WriteLine($"\nGenerated {lines.Length} lines:");
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    Console.WriteLine($"Line {i + 1}: {lines[i]}");
+                    
+                    // Count columns
+                    var columns = lines[i].Split(',');
+                    Console.WriteLine($"  Column count: {columns.Length}");
+                    
+                    if (i == 0)
+                    {
+                        Console.WriteLine("  Header columns:");
+                        for (int j = 0; j < columns.Length; j++)
+                        {
+                            Console.WriteLine($"    {j + 1}: {columns[j]}");
+                        }
+                    }
+                }
+                
+                Console.WriteLine("\nTest completed successfully!");
+                
+                // Show any log messages
+                if (logMessages.Count > 0)
+                {
+                    Console.WriteLine("\nLog messages:");
+                    foreach (var msg in logMessages)
+                    {
+                        Console.WriteLine($"  {msg}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+            }
+        }
+    }
+}

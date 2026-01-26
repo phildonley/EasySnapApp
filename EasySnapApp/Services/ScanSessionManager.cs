@@ -9,7 +9,7 @@ namespace EasySnapApp.Services
     {
         private readonly BarcodeScannerService _barcode;
         private readonly ScaleService _scale;
-        private readonly KinectService _kinect; // kept for compatibility, not used in current workflow
+
         private readonly CanonCameraService _camera;
 
         private readonly List<ScanResult> _session = new();
@@ -28,12 +28,10 @@ namespace EasySnapApp.Services
         public ScanSessionManager(
             BarcodeScannerService barcode,
             ScaleService scale,
-            KinectService kinect,
             CanonCameraService camera)
         {
             _barcode = barcode;
             _scale = scale;
-            _kinect = kinect;
             _camera = camera;
         }
 

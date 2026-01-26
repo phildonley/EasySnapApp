@@ -41,7 +41,7 @@
             <MenuItem Header="_Settings">
                 <MenuItem Header="General Settings..." Click="GeneralSettings_Click"/>
                 <Separator/>
-                <MenuItem Header="Measurement Tools..." Click="MeasurementTools_Click"/>
+
                 <MenuItem Header="Photography Tools..." Click="PhotographyTools_Click"/>
             </MenuItem>
             <MenuItem Header="_Help">
@@ -135,6 +135,130 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
+            <!-- Devices/Services Drawer -->
+            <Border Grid.Row="1"
+                    Grid.Column="0"
+                    Grid.ColumnSpan="3"
+                    Margin="0,8,0,0"
+                    BorderBrush="#555"
+                    BorderThickness="1"
+                    Background="#2A2A2E">
+                <Expander x:Name="DevicesExpander"
+                          Header="Devices / Services"
+                          IsExpanded="False"
+                          Foreground="#F0F0F0"
+                          Background="#2A2A2E"
+                          BorderThickness="0"
+                          Padding="8">
+                    <Grid Margin="8,4,8,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Camera Status -->
+                        <TextBlock Grid.Row="0" Grid.Column="0"
+                                   Text="Camera:"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,8,0"
+                                   FontWeight="Bold"/>
+                        <TextBlock x:Name="CameraStatusTextBlock"
+                                   Grid.Row="0" Grid.Column="1"
+                                   Text="Detecting..."
+                                   VerticalAlignment="Center"
+                                   Foreground="#FFAA66"
+                                   Margin="0,0,8,0"/>
+                        <Button x:Name="RefreshCameraButton"
+                                Grid.Row="0" Grid.Column="2"
+                                Content="Refresh"
+                                Width="80"
+                                Margin="0,0,8,0"
+                                Click="RefreshCameraButton_Click"/>
+
+                        <!-- Scale Configuration -->
+                        <TextBlock Grid.Row="1" Grid.Column="0"
+                                   Text="Scale COM Port:"
+                                   VerticalAlignment="Center"
+                                   Margin="0,8,8,0"
+                                   FontWeight="Bold"/>
+                        <ComboBox x:Name="ComPortComboBox"
+                                  Grid.Row="1" Grid.Column="1"
+                                  Width="120"
+                                  Margin="0,8,8,0"
+                                  SelectionChanged="ComPortComboBox_SelectionChanged"/>
+                        <Button x:Name="RefreshPortsButton"
+                                Grid.Row="1" Grid.Column="2"
+                                Content="Refresh"
+                                Width="80"
+                                Margin="0,8,8,0"
+                                Click="RefreshPortsButton_Click"/>
+                        <TextBlock x:Name="ScaleStatusTextBlock"
+                                   Grid.Row="1" Grid.Column="3"
+                                   Text="Not configured"
+                                   VerticalAlignment="Center"
+                                   Foreground="#FFAA66"
+                                   Margin="0,8,8,0"/>
+                        <Button x:Name="TestScaleButton"
+                                Grid.Row="1" Grid.Column="4"
+                                Content="Test Scale"
+                                Width="80"
+                                Margin="0,8,0,0"
+                                Click="TestScaleButton_Click"/>
+
+                        <!-- Export Settings -->
+                        <TextBlock Grid.Row="2" Grid.Column="0"
+                                   Text="Export Units:"
+                                   VerticalAlignment="Center"
+                                   Margin="0,8,8,0"
+                                   FontWeight="Bold"/>
+                        <StackPanel Grid.Row="2" Grid.Column="1"
+                                    Grid.ColumnSpan="2"
+                                    Orientation="Horizontal"
+                                    Margin="0,8,0,0">
+                            <TextBlock Text="Dim:" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                            <ComboBox x:Name="DimUnitComboBox"
+                                      Width="60"
+                                      Margin="0,0,12,0"
+                                      SelectionChanged="ExportSettings_Changed">
+                                <ComboBoxItem Content="in" IsSelected="True"/>
+                                <ComboBoxItem Content="cm"/>
+                            </ComboBox>
+                            <TextBlock Text="Wgt:" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                            <ComboBox x:Name="WgtUnitComboBox"
+                                      Width="60"
+                                      Margin="0,0,12,0"
+                                      SelectionChanged="ExportSettings_Changed">
+                                <ComboBoxItem Content="lb" IsSelected="True"/>
+                                <ComboBoxItem Content="kg"/>
+                            </ComboBox>
+                            <TextBlock Text="Site:" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                            <TextBox x:Name="SiteIdTextBox"
+                                     Width="60"
+                                     Text="733"
+                                     TextChanged="ExportSettings_Changed"/>
+                        </StackPanel>
+
+                        <!-- Device Status Summary -->
+                        <TextBlock Grid.Row="3" Grid.Column="0"
+                                   Grid.ColumnSpan="5"
+                                   x:Name="DeviceStatusSummary"
+                                   Text="Camera: Detecting...  |  Scale: Not configured"
+                                   Foreground="#CCCCCC"
+                                   FontSize="11"
+                                   Margin="0,8,0,0"/>
+                    </Grid>
+                </Expander>
+            </Border>
+
             <!-- Left Pane: Manual Part Data -->
             <Border Grid.Row="0"
                     Grid.Column="0"
@@ -188,7 +312,43 @@
                                 Content="Export CSV"
                                 Click="ExportCsvButton_Click"
                                 Height="36"
-                                Margin="0,12,0,0"/>
+                                Margin="0,12,0,6"/>
+
+                        <!-- Session Log Panel -->
+                        <Separator Margin="0,10,0,10"/>
+                        <TextBlock Text="Session Log"
+                                   FontSize="14"
+                                   FontWeight="Bold"
+                                   Margin="0,0,0,6"/>
+                        <Border Background="#1E1E22"
+                                BorderBrush="#555"
+                                BorderThickness="1"
+                                Height="120">
+                            <ScrollViewer x:Name="LogScrollViewer"
+                                          VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Auto"
+                                          Padding="4">
+                                <TextBox x:Name="SessionLogTextBox"
+                                         FontSize="11"
+                                         Foreground="#CCCCCC"
+                                         Background="Transparent"
+                                         BorderThickness="0"
+                                         FontFamily="Consolas"
+                                         TextWrapping="NoWrap"
+                                         IsReadOnly="True"
+                                         AcceptsReturn="True"
+                                         VerticalScrollBarVisibility="Auto"
+                                         HorizontalScrollBarVisibility="Auto"
+                                         Text="Ready.">
+                                    <TextBox.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="Copy All" Click="CopyAllLog_Click"/>
+                                            <MenuItem Header="Copy Selected" Click="CopySelectedLog_Click"/>
+                                        </ContextMenu>
+                                    </TextBox.ContextMenu>
+                                </TextBox>
+                            </ScrollViewer>
+                        </Border>
 
                     </StackPanel>
                 </ScrollViewer>

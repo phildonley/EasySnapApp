@@ -22,5 +22,125 @@ namespace EasySnapApp.Properties {
                 return defaultInstance;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string ScaleComPort {
+            get {
+                return ((string)(this["ScaleComPort"]));
+            }
+            set {
+                this["ScaleComPort"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("733")]
+        public string ExportSiteId {
+            get {
+                return ((string)(this["ExportSiteId"]));
+            }
+            set {
+                this["ExportSiteId"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("in")]
+        public string ExportDimUnit {
+            get {
+                return ((string)(this["ExportDimUnit"]));
+            }
+            set {
+                this["ExportDimUnit"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("lb")]
+        public string ExportWgtUnit {
+            get {
+                return ((string)(this["ExportWgtUnit"]));
+            }
+            set {
+                this["ExportWgtUnit"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("in")]
+        public string ExportVolUnit {
+            get {
+                return ((string)(this["ExportVolUnit"]));
+            }
+            set {
+                this["ExportVolUnit"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("166")]
+        public string ExportFactor {
+            get {
+                return ((string)(this["ExportFactor"]));
+            }
+            set {
+                this["ExportFactor"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Y")]
+        public string ExportOptInfo2 {
+            get {
+                return ((string)(this["ExportOptInfo2"]));
+            }
+            set {
+                this["ExportOptInfo2"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Y")]
+        public string ExportOptInfo3 {
+            get {
+                return ((string)(this["ExportOptInfo3"]));
+            }
+            set {
+                this["ExportOptInfo3"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("JPEG_Large")]
+        public string CameraImageQuality {
+            get {
+                return ((string)(this["CameraImageQuality"]));
+            }
+            set {
+                this["CameraImageQuality"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("JPEG")]
+        public string CameraImageFormat {
+            get {
+                return ((string)(this["CameraImageFormat"]));
+            }
+            set {
+                this["CameraImageFormat"] = value;
+            }
+        }
     }
 }

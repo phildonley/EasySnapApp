@@ -7,14 +7,13 @@ namespace EasySnapApp.Views
 {
     public partial class DeviceSettingsWindow : Window
     {
-        private readonly KinectService _kinect;
+
         private readonly CanonCameraService _camera;
         private readonly ThermalScannerService _thermal;
         private readonly IntelIntellisenseService _intel;
         private readonly LaserArrayService _laser;
 
         public DeviceSettingsWindow(
-            KinectService k,
             CanonCameraService c,
             ThermalScannerService t,
             IntelIntellisenseService i,
@@ -24,7 +23,7 @@ namespace EasySnapApp.Views
 
             DeviceList.SelectedIndex = 0;
 
-            _kinect = k; _camera = c; _thermal = t; _intel = i; _laser = l;
+            _camera = c; _thermal = t; _intel = i; _laser = l;
 
             DeviceList.SelectionChanged += DeviceList_SelectionChanged;
             ActionTabs.SelectionChanged += ActionTabs_SelectionChanged;
@@ -57,29 +56,21 @@ namespace EasySnapApp.Views
 
             if (tabHeader == "Stage Setup")
             {
-                if (deviceTag == "Kinect")
-                    StageContentHost.Content =
-                        new StageSettingsDialog(_kinect) { Owner = this }.Content;
-                else
-                    StageContentHost.Content = new TextBlock
-                    {
-                        Text = "Stage Setup not implemented for this device.",
-                        Foreground = Brushes.Gray,
-                        Margin = new Thickness(12)
-                    };
+                StageContentHost.Content = new TextBlock
+                {
+                    Text = "Stage Setup not implemented for this device.",
+                    Foreground = Brushes.Gray,
+                    Margin = new Thickness(12)
+                };
             }
             else if (tabHeader == "Calibration")
             {
-                if (deviceTag == "Kinect")
-                    CalibContentHost.Content =
-                        new CalibrationDialog(_kinect) { Owner = this }.Content;
-                else
-                    CalibContentHost.Content = new TextBlock
-                    {
-                        Text = "Calibration not implemented for this device.",
-                        Foreground = Brushes.Gray,
-                        Margin = new Thickness(12)
-                    };
+                CalibContentHost.Content = new TextBlock
+                {
+                    Text = "Calibration not implemented for this device.",
+                    Foreground = Brushes.Gray,
+                    Margin = new Thickness(12)
+                };
             }
         }
     }
