@@ -17,6 +17,12 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <None Remove="Assets\Splash\EasySnap_Splash1.png" />
+	  <None Remove="Assets\Splash\EasySnap_Splash2.png" />
+	  <None Remove="Assets\Splash\EasySnap_Splash3.png" />
+	  <None Remove="Assets\Splash\EasySnap_Splash4.png" />
+	  <None Remove="Assets\Splash\EasySnap_Splash5.png" />
+	  <None Remove="SplashWindow.xaml" />
 	  <None Remove="Views\GeneralSettingsWindow.xaml" />
 	  <None Remove="Views\MeasurementToolsWindow.xaml" />
 	  <None Remove="Views\Settings\General\GeneralFileSettingsControl.xaml" />
@@ -26,6 +32,12 @@
 	  <None Remove="Views\Settings\Measurement\MeasurementGeneralSettingsControl.xaml" />
 	  <None Remove="Views\Settings\Measurement\MultiCamSettingsControl.xaml" />
 	  <None Remove="Views\TestWindow.xaml" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Resource Include="Assets\Splash\EasySnap_Splash1.png">
+	    <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+	  </Resource>
 	</ItemGroup>
 
 	<!-- WPF Pages and their code-behind -->
@@ -49,6 +61,7 @@
 		<Compile Include="Views\Settings\Measurement\LaserArraySettingsControl.xaml.cs" />
 		<Compile Include="Views\Settings\Measurement\MeasurementGeneralSettingsControl.xaml.cs" />
 		<Compile Include="Views\Settings\Measurement\MultiCamSettingsControl.xaml.cs" />
+		<Compile Include="SplashWindow.xaml.cs" />
 		<Compile Include="Views\TestWindow.xaml.cs" />
 		<Compile Include="Views\DimsExportSelectionWindow.xaml.cs">
 			<DependentUpon>DimsExportSelectionWindow.xaml</DependentUpon>
@@ -68,6 +81,10 @@
 		<Compile Include="MainWindow.xaml.cs">
 			<DependentUpon>MainWindow.xaml</DependentUpon>
 		</Compile>
+		<Page Include="SplashWindow.xaml">
+		  <Generator></Generator>
+		  <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</Page>
 
 		<!-- Settings Window -->
 
@@ -175,6 +192,18 @@
 	<!-- Embedded resources -->
 	<ItemGroup>
 		<Resource Include="Assets\placeholder.jpg" />
+		<Resource Include="Assets\Splash\EasySnap_Splash2.png">
+		  <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</Resource>
+		<Resource Include="Assets\Splash\EasySnap_Splash3.png">
+		  <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</Resource>
+		<Resource Include="Assets\Splash\EasySnap_Splash4.png">
+		  <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</Resource>
+		<Resource Include="Assets\Splash\EasySnap_Splash5.png">
+		  <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</Resource>
 	</ItemGroup>
 
 
