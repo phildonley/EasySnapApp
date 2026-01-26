@@ -11,6 +11,7 @@ using EasySnapApp.Models;
 using EasySnapApp.Services;
 using EasySnapApp.Views;
 using EasySnapApp.Utils;
+using EasySnapApp.Data; // PHASE 2: Database integration
 using Microsoft.Win32;
 using Path = System.IO.Path;
 
@@ -20,6 +21,12 @@ namespace EasySnapApp
     {
         private readonly ScanSessionManager _sessionManager;
         private readonly ObservableCollection<ScanResult> _results;
+
+        // PHASE 2: Database persistence
+        private readonly EasySnapDb _database;
+        private readonly CaptureRepository _repository;
+        private string _currentPartNumber;
+        private CaptureSession _currentSession;
 
         // Services (kept as-is so your project structure remains intact)
         private readonly CanonCameraService _cameraSvc;
@@ -52,6 +59,22 @@ namespace EasySnapApp
             _isInitializingExportSettings = true;
 
             InitializeComponent();
+
+            // PHASE 2: Initialize database first
+            try
+            {
+                _database = new EasySnapDb();
+                _repository = new CaptureRepository(_database);
+                _database.InitializeDatabase();
+                LogSessionMessage($"DB initialized at {_database.DatabasePath}");
+            }
+            catch (Exception ex)
+            {
+                LogSessionMessage($"DB initialization failed: {ex.Message}");
+                MessageBox.Show($"Database initialization failed: {ex.Message}\n\nThe application may not function correctly.", 
+                               "Database Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                // Continue without database - app should still function in basic mode
+            }
 
             // Prepare exports folder
             var exports = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Exports");
@@ -96,6 +119,12 @@ namespace EasySnapApp
             
             // STEP 2: Connect to camera for real tethering
             InitializeCameraConnection();
+            
+            // PHASE 2: Load last session from database
+            LoadLastSessionFromDatabase();
+            
+            // PHASE 3: Initialize export features (NO MORE SAMPLE DATA)
+            InitializePhase3Features();
         }
 
         private void SessionManager_OnStatusMessage(string message)
@@ -243,6 +272,172 @@ namespace EasySnapApp
 
         #endregion
         
+        #region PHASE 2: Database Session Loading
+        
+        /// <summary>
+        /// PHASE 2: Load the last session from database on startup
+        /// </summary>
+        private void LoadLastSessionFromDatabase()
+        {
+            try
+            {
+                if (_repository == null)
+                {
+                    LogSessionMessage("DB not available - skipping session load");
+                    return;
+                }
+                
+                // Try to get last part number from settings, fallback to most recent session
+                var lastPartNumber = Properties.Settings.Default.LastPartNumber;
+                CaptureSession sessionToLoad = null;
+                
+                if (!string.IsNullOrEmpty(lastPartNumber))
+                {
+                    sessionToLoad = _repository.GetOrCreateActiveSession(lastPartNumber);
+                    LogSessionMessage($"Loaded session for saved part number: {lastPartNumber}");
+                }
+                else
+                {
+                    sessionToLoad = _repository.GetMostRecentSession();
+                    if (sessionToLoad != null)
+                    {
+                        LogSessionMessage($"Loaded most recent session: {sessionToLoad.PartNumber}");
+                    }
+                }
+                
+                if (sessionToLoad != null)
+                {
+                    _currentSession = sessionToLoad;
+                    _currentPartNumber = sessionToLoad.PartNumber;
+                    
+                    // Update UI with part number
+                    PartNumberTextBox.Text = _currentPartNumber;
+                    
+                    // Load images from database
+                    LoadImagesFromDatabase(_currentPartNumber);
+                    
+                    // Set camera session context for automatic capture
+                    var exports = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Exports");
+                    _cameraSvc.SetSessionContext(_currentPartNumber, () => GetNextSequenceForPart(_currentPartNumber), exports);
+                    
+                    LogSessionMessage($"Session restored: {_currentPartNumber} with {_results.Count} images");
+                }
+                else
+                {
+                    LogSessionMessage("No previous session found - ready for new session");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogSessionMessage($"LoadLastSessionFromDatabase error: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// PHASE 2: Load images from database for a part number
+        /// </summary>
+        private void LoadImagesFromDatabase(string partNumber)
+        {
+            try
+            {
+                if (_repository == null || string.IsNullOrEmpty(partNumber))
+                    return;
+                    
+                var dbImages = _repository.GetImagesForPart(partNumber);
+                LogSessionMessage($"Loaded {dbImages.Count} images from DB for part {partNumber}");
+                
+                foreach (var dbImage in dbImages)
+                {
+                    try
+                    {
+                        // Create ScanResult from database record
+                        var result = new ScanResult
+                        {
+                            PartNumber = dbImage.PartNumber,
+                            Sequence = dbImage.Sequence,
+                            ImageFileName = Path.GetFileName(dbImage.FullPath),
+                            TimeStamp = dbImage.CaptureTimeUtc.ToString("yyyyMMdd_HHmmss"),
+                            FullImagePath = dbImage.FullPath,
+                            ThumbnailPath = dbImage.ThumbPath
+                        };
+                        
+                        // Set dimensions and weight if available
+                        if (dbImage.WidthPx.HasValue) result.LengthIn = dbImage.WidthPx.Value / 100.0; // Convert from px (placeholder)
+                        if (dbImage.HeightPx.HasValue) result.HeightIn = dbImage.HeightPx.Value / 100.0;
+                        if (dbImage.WeightGrams.HasValue) result.WeightLb = dbImage.WeightGrams.Value * 0.00220462; // Convert g to lb
+                        if (dbImage.DimX.HasValue) result.LengthIn = dbImage.DimX.Value;
+                        if (dbImage.DimY.HasValue) result.DepthIn = dbImage.DimY.Value;
+                        if (dbImage.DimZ.HasValue) result.HeightIn = dbImage.DimZ.Value;
+                        
+                        // Load thumbnail image (non-blocking)
+                        LoadThumbnailForResult(result);
+                        
+                        // Apply part-level data if available
+                        if (_partData.TryGetValue(partNumber, out var partData))
+                        {
+                            result.LengthIn = partData.LengthIn ?? result.LengthIn;
+                            result.DepthIn = partData.WidthIn ?? result.DepthIn;
+                            result.HeightIn = partData.HeightIn ?? result.HeightIn;
+                            result.WeightLb = partData.WeightLb ?? result.WeightLb;
+                        }
+                        
+                        _results.Add(result);
+                    }
+                    catch (Exception ex)
+                    {
+                        LogSessionMessage($"Failed to load DB image {Path.GetFileName(dbImage.FullPath)}: {ex.Message}");
+                    }
+                }
+                
+                // Clean up missing files
+                if (_results.Count > 0)
+                {
+                    var cleanedCount = _repository.CleanupMissingFiles(partNumber);
+                    if (cleanedCount > 0)
+                    {
+                        LogSessionMessage($"Marked {cleanedCount} missing files as deleted in DB");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogSessionMessage($"LoadImagesFromDatabase error: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// PHASE 2: Load thumbnail for a result (non-blocking)
+        /// </summary>
+        private void LoadThumbnailForResult(ScanResult result)
+        {
+            try
+            {
+                // Try thumbnail first
+                if (!string.IsNullOrEmpty(result.ThumbnailPath) && File.Exists(result.ThumbnailPath))
+                {
+                    result.ThumbnailImage = LoadImageSafely(result.ThumbnailPath);
+                }
+                // Fallback to full image (slower but functional)
+                else if (!string.IsNullOrEmpty(result.FullImagePath) && File.Exists(result.FullImagePath))
+                {
+                    result.ThumbnailImage = LoadImageSafely(result.FullImagePath);
+                }
+                // If no file exists, use placeholder
+                else
+                {
+                    // Could load a "missing file" placeholder here
+                    result.ThumbnailImage = null;
+                }
+            }
+            catch (Exception ex)
+            {
+                LogSessionMessage($"Failed to load thumbnail for {result.ImageFileName}: {ex.Message}");
+                result.ThumbnailImage = null;
+            }
+        }
+        
+        #endregion
+        
         #region PHASE 1: Image Loading and Session Management
         
         /// <summary>
@@ -387,6 +582,36 @@ namespace EasySnapApp
                         return;
                     }
                     
+                    // PHASE 2: Save to database first
+                    if (_repository != null)
+                    {
+                        try
+                        {
+                            var sequence = GetSequenceFromFilename(fullImagePath);
+                            var fileInfo = new FileInfo(fullImagePath);
+                            
+                            var capturedImage = new CapturedImage
+                            {
+                                ImageId = Guid.NewGuid().ToString(),
+                                SessionId = _currentSession?.SessionId ?? Guid.NewGuid().ToString(),
+                                PartNumber = partNumber,
+                                Sequence = sequence,
+                                FullPath = fullImagePath,
+                                ThumbPath = thumbnailPath,
+                                CaptureTimeUtc = DateTime.UtcNow,
+                                FileSizeBytes = fileInfo.Length,
+                                IsDeleted = false
+                            };
+                            
+                            _repository.InsertCapturedImage(capturedImage);
+                            LogSessionMessage($"Inserted image row: {partNumber}.{sequence:000} ({fileInfo.Length:N0} bytes)");
+                        }
+                        catch (Exception dbEx)
+                        {
+                            LogSessionMessage($"DB insert failed: {dbEx.Message}");
+                        }
+                    }
+                    
                     // Create ScanResult for the automatically captured image
                     var result = new ScanResult
                     {
@@ -503,7 +728,20 @@ namespace EasySnapApp
         
         private int GetNextSequenceForPart(string partNumber)
         {
-            // Find highest sequence number for this part and return next
+            // PHASE 2: Use database if available
+            if (_repository != null && !string.IsNullOrEmpty(partNumber))
+            {
+                try
+                {
+                    return _repository.GetNextSequenceForPart(partNumber);
+                }
+                catch (Exception ex)
+                {
+                    LogSessionMessage($"DB sequence lookup failed: {ex.Message}");
+                }
+            }
+            
+            // Fallback to in-memory calculation
             var existingSequences = _results
                 .Where(r => string.Equals(r.PartNumber, partNumber, StringComparison.OrdinalIgnoreCase))
                 .Select(r => r.Sequence)
@@ -782,10 +1020,36 @@ namespace EasySnapApp
 
             LogSessionMessage("Starting new session...");
             _sessionManager.StartNewSession(part);
-            _results.Clear();
+            // DON'T clear results - keep previous parts visible
+            // _results.Clear(); // REMOVED - keep previous work visible
             
-            // PHASE 1: Load existing images for this part
-            LoadSessionImages(part);
+            // PHASE 2: Database session management
+            if (_repository != null)
+            {
+                try
+                {
+                    _currentSession = _repository.GetOrCreateActiveSession(part);
+                    _currentPartNumber = part;
+                    
+                    // Save as last part number
+                    Properties.Settings.Default.LastPartNumber = part;
+                    Properties.Settings.Default.Save();
+                    
+                    LogSessionMessage($"DB session ready: {_currentSession.SessionId}");
+                    
+                    // Load existing images from database
+                    LoadImagesFromDatabase(part);
+                }
+                catch (Exception dbEx)
+                {
+                    LogSessionMessage($"DB session setup failed: {dbEx.Message}");
+                }
+            }
+            else
+            {
+                // Fallback to old file-based loading
+                LoadSessionImages(part);
+            }
             
             PreviewImage.Source = null;
             PreviewMetaTextBlock.Text = "";
@@ -1112,14 +1376,20 @@ namespace EasySnapApp
 
         private void OpenSettings_Click(object sender, RoutedEventArgs e)
         {
-            var dlg = new DeviceSettingsWindow(
-                _cameraSvc,
-                _thermalSvc,
-                _intelSvc,
-                _laserSvc)
-            { Owner = this };
-
-            dlg.ShowDialog();
+            try
+            {
+                var settingsWindow = new DimsExportSettingsWindow()
+                {
+                    Owner = this
+                };
+                settingsWindow.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                LogSessionMessage($"Error opening DIMS settings: {ex.Message}");
+                MessageBox.Show($"Error opening DIMS settings: {ex.Message}", "Error", 
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
         
         #region Log Context Menu Handlers
@@ -1156,6 +1426,48 @@ namespace EasySnapApp
             catch (Exception ex)
             {
                 StatusTextBlock.Text = $"Failed to copy selected text: {ex.Message}";
+            }
+        }
+        
+        #endregion
+        
+        #region Phase 3: Export Functionality
+        
+        /// <summary>
+        /// PHASE 3: Initialize export features without sample data
+        /// </summary>
+        private void InitializePhase3Features()
+        {
+            try
+            {
+                // PHASE 3: No more sample data creation - use real database only
+                LogSessionMessage("Phase 3: Export features initialized (real data only)");
+            }
+            catch (Exception ex)
+            {
+                LogSessionMessage($"Phase 3 initialization warning: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// PHASE 3: Open the Export Window with real database path
+        /// </summary>
+        private void OpenExportWindow_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // Pass the actual repository instance so ExportWindow uses the same database connection
+                var exportWindow = new EasySnapApp.Views.ExportWindow(_repository)
+                {
+                    Owner = this
+                };
+                exportWindow.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                LogSessionMessage($"Error opening Export window: {ex.Message}");
+                MessageBox.Show($"Error opening Export window: {ex.Message}", "Error", 
+                    MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
         

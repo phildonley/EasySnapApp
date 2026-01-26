@@ -1,7 +1,7 @@
 ﻿<Window x:Class="EasySnapApp.Views.DeviceSettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Device Settings" Height="600" Width="900"
+        Title="DIMS Export Settings" Height="600" Width="900"
         Background="#1E1E22" Foreground="#F0F0F0"
         FontFamily="Segoe UI" FontSize="13">
     <Grid Margin="12">
@@ -10,7 +10,7 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
         <StackPanel Grid.Column="0">
-            <TextBlock Text="Devices"
+            <TextBlock Text="Settings"
                  FontSize="18" FontWeight="Bold"
                  Foreground="#FAFAFA"
                  Margin="0,0,0,16"/>
@@ -19,10 +19,10 @@
                Foreground="#F0F0F0"
                BorderThickness="0"
                SelectionChanged="DeviceList_SelectionChanged">
-                <ListBoxItem Tag="Measurement" IsSelected="True">Dimension Scanner</ListBoxItem>
+                <ListBoxItem Tag="DIMS" IsSelected="True">DIMS Export</ListBoxItem>
+                <ListBoxItem Tag="Measurement">Dimension Scanner</ListBoxItem>
                 <ListBoxItem Tag="WebCam">Overhead Camera</ListBoxItem>
                 <ListBoxItem Tag="WebCamSide">Side Camera</ListBoxItem>
-
                 <ListBoxItem Tag="Thermal">Thermal Scanner</ListBoxItem>
                 <ListBoxItem Tag="Intel">Intel Intellisense</ListBoxItem>
                 <ListBoxItem Tag="Laser">Laser Array</ListBoxItem>
@@ -38,12 +38,115 @@
                  Grid.Row="0"
                  FontSize="20" FontWeight="Bold"
                  Foreground="#FAFAFA"
-                 Text="Dimension Scanner"
+                 Text="DIMS Export Settings"
                  Margin="0,0,0,8"/>
+
+            <!-- DIMS Export Settings Panel -->
+            <ScrollViewer Grid.Row="1" x:Name="DimsSettingsPanel" 
+                          VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="0,16">
+                    <CheckBox x:Name="chkEnableDimsOverride" 
+                              Content="Enable DIMS export settings override"
+                              IsChecked="True" 
+                              Foreground="#F0F0F0"
+                              Margin="0,0,0,20"/>
+                    
+                    <TextBlock Text="These values are used for DIMS export CSV files." 
+                               Foreground="#B0B0B0" Margin="0,0,0,16"/>
+                    
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="120"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <!-- Row 1: Site ID and Factor -->
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Site ID:" VerticalAlignment="Center" 
+                                   Foreground="#F0F0F0" Margin="0,8"/>
+                        <TextBox Grid.Row="0" Grid.Column="1" x:Name="txtSiteId" Text="733" 
+                                 Background="#2A2A2E" Foreground="#F0F0F0" BorderBrush="#555" 
+                                 Margin="0,8"/>
+                        
+                        <TextBlock Grid.Row="0" Grid.Column="2" Text="Factor:" VerticalAlignment="Center" 
+                                   Foreground="#F0F0F0" Margin="16,8,0,8"/>
+                        <TextBox Grid.Row="0" Grid.Column="3" x:Name="txtFactor" Text="166" 
+                                 Background="#2A2A2E" Foreground="#F0F0F0" BorderBrush="#555" 
+                                 Margin="16,8,0,8"/>
+                        
+                        <!-- Row 2: Units -->
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Dimension Unit:" VerticalAlignment="Center" 
+                                   Foreground="#F0F0F0" Margin="0,8"/>
+                        <TextBox Grid.Row="1" Grid.Column="1" x:Name="txtDimUnit" Text="in" 
+                                 Background="#2A2A2E" Foreground="#F0F0F0" BorderBrush="#555" 
+                                 Margin="0,8"/>
+                        
+                        <TextBlock Grid.Row="1" Grid.Column="2" Text="Weight Unit:" VerticalAlignment="Center" 
+                                   Foreground="#F0F0F0" Margin="16,8,0,8"/>
+                        <TextBox Grid.Row="1" Grid.Column="3" x:Name="txtWgtUnit" Text="lb" 
+                                 Background="#2A2A2E" Foreground="#F0F0F0" BorderBrush="#555" 
+                                 Margin="16,8,0,8"/>
+                        
+                        <!-- Row 3: Volume Unit -->
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Volume Unit:" VerticalAlignment="Center" 
+                                   Foreground="#F0F0F0" Margin="0,8"/>
+                        <TextBox Grid.Row="2" Grid.Column="1" x:Name="txtVolUnit" Text="in" 
+                                 Background="#2A2A2E" Foreground="#F0F0F0" BorderBrush="#555" 
+                                 Margin="0,8"/>
+                        
+                        <!-- Row 4: Optional Info fields -->
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="OPT_INFO_2:" VerticalAlignment="Center" 
+                                   Foreground="#F0F0F0" Margin="0,8"/>
+                        <TextBox Grid.Row="3" Grid.Column="1" x:Name="txtOptInfo2" Text="Y" 
+                                 Background="#2A2A2E" Foreground="#F0F0F0" BorderBrush="#555" 
+                                 Margin="0,8"/>
+                        
+                        <TextBlock Grid.Row="3" Grid.Column="2" Text="OPT_INFO_3:" VerticalAlignment="Center" 
+                                   Foreground="#F0F0F0" Margin="16,8,0,8"/>
+                        <TextBox Grid.Row="3" Grid.Column="3" x:Name="txtOptInfo3" Text="Y" 
+                                 Background="#2A2A2E" Foreground="#F0F0F0" BorderBrush="#555" 
+                                 Margin="16,8,0,8"/>
+                        
+                        <!-- Row 5: OPT_INFO_8 and UPDATED -->
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="OPT_INFO_8:" VerticalAlignment="Center" 
+                                   Foreground="#F0F0F0" Margin="0,8"/>
+                        <TextBox Grid.Row="4" Grid.Column="1" x:Name="txtOptInfo8" Text="0" 
+                                 Background="#2A2A2E" Foreground="#F0F0F0" BorderBrush="#555" 
+                                 Margin="0,8"/>
+                        
+                        <TextBlock Grid.Row="4" Grid.Column="2" Text="UPDATED:" VerticalAlignment="Center" 
+                                   Foreground="#F0F0F0" Margin="16,8,0,8"/>
+                        <TextBox Grid.Row="4" Grid.Column="3" x:Name="txtUpdated" Text="N" 
+                                 Background="#2A2A2E" Foreground="#F0F0F0" BorderBrush="#555" 
+                                 Margin="16,8,0,8"/>
+                    </Grid>
+                    
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20">
+                        <Button Content="Reset to Defaults" x:Name="btnResetDims" 
+                                Background="#4A4A4E" Foreground="#F0F0F0" BorderThickness="0" 
+                                Padding="12,6" Margin="0,0,10,0" Click="ResetDimsDefaults_Click"/>
+                        <Button Content="Save Settings" x:Name="btnSaveDims" 
+                                Background="#007ACC" Foreground="#FFFFFF" BorderThickness="0" 
+                                Padding="12,6" Click="SaveDimsSettings_Click"/>
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+            
+            <!-- Other Settings Panels (hidden initially) -->
             <TabControl x:Name="ActionTabs"
                   Grid.Row="1"
                   Background="#2A2A2E"
                   Foreground="#F0F0F0"
+                  Visibility="Collapsed"
                   SelectionChanged="ActionTabs_SelectionChanged">
                 <TabItem Header="Stage Setup">
                     <ContentControl x:Name="StageContentHost"/>

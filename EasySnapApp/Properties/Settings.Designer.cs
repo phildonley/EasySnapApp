@@ -142,5 +142,137 @@ namespace EasySnapApp.Properties {
                 this["CameraImageFormat"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string LastPartNumber {
+            get {
+                return ((string)(this["LastPartNumber"]));
+            }
+            set {
+                this["LastPartNumber"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("733")]
+        public string DimsSiteId {
+            get {
+                return ((string)(this["DimsSiteId"]));
+            }
+            set {
+                this["DimsSiteId"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("166")]
+        public string DimsFactor {
+            get {
+                return ((string)(this["DimsFactor"]));
+            }
+            set {
+                this["DimsFactor"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("in")]
+        public string DimsDimUnit {
+            get {
+                return ((string)(this["DimsDimUnit"]));
+            }
+            set {
+                this["DimsDimUnit"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("lb")]
+        public string DimsWgtUnit {
+            get {
+                return ((string)(this["DimsWgtUnit"]));
+            }
+            set {
+                this["DimsWgtUnit"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("in")]
+        public string DimsVolUnit {
+            get {
+                return ((string)(this["DimsVolUnit"]));
+            }
+            set {
+                this["DimsVolUnit"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Y")]
+        public string DimsOptInfo2 {
+            get {
+                return ((string)(this["DimsOptInfo2"]));
+            }
+            set {
+                this["DimsOptInfo2"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Y")]
+        public string DimsOptInfo3 {
+            get {
+                return ((string)(this["DimsOptInfo3"]));
+            }
+            set {
+                this["DimsOptInfo3"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public string DimsOptInfo8 {
+            get {
+                return ((string)(this["DimsOptInfo8"]));
+            }
+            set {
+                this["DimsOptInfo8"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("N")]
+        public string DimsUpdated {
+            get {
+                return ((string)(this["DimsUpdated"]));
+            }
+            set {
+                this["DimsUpdated"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool DimsEnableOverride {
+            get {
+                return ((bool)(this["DimsEnableOverride"]));
+            }
+            set {
+                this["DimsEnableOverride"] = value;
+            }
+        }
     }
 }

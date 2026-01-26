@@ -1,103 +1,16 @@
-﻿using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Media;
-using EasySnapApp.Services;
+using System;
+using System.Windows;
 using EasySnapApp.Models;
 
 namespace EasySnapApp.Views
 {
-    public partial class DeviceSettingsWindow : Window
+    public partial class DimsExportSettingsWindow : Window
     {
-
-        private readonly CanonCameraService _camera;
-        private readonly ThermalScannerService _thermal;
-        private readonly IntelIntellisenseService _intel;
-        private readonly LaserArrayService _laser;
-
-        public DeviceSettingsWindow(
-            CanonCameraService c,
-            ThermalScannerService t,
-            IntelIntellisenseService i,
-            LaserArrayService l)
+        public DimsExportSettingsWindow()
         {
             InitializeComponent();
-
-            DeviceList.SelectedIndex = 0;
-
-            _camera = c; _thermal = t; _intel = i; _laser = l;
-
-            // Load DIMS settings when window opens
             LoadDimsSettings();
-            
-            LoadViews();
         }
-
-        private void DeviceList_SelectionChanged(object s, SelectionChangedEventArgs e)
-        {
-            if (DeviceList.SelectedItem is ListBoxItem item)
-            {
-                var deviceTag = item.Tag as string;
-                
-                if (deviceTag == "DIMS")
-                {
-                    DeviceTitle.Text = "DIMS Export Settings";
-                    DimsSettingsPanel.Visibility = Visibility.Visible;
-                    ActionTabs.Visibility = Visibility.Collapsed;
-                }
-                else
-                {
-                    if (item.Content != null)
-                        DeviceTitle.Text = item.Content.ToString();
-                    else
-                        DeviceTitle.Text = "";
-                    
-                    DimsSettingsPanel.Visibility = Visibility.Collapsed;
-                    ActionTabs.Visibility = Visibility.Visible;
-                }
-            }
-
-            LoadViews();
-        }
-
-        private void ActionTabs_SelectionChanged(object s, SelectionChangedEventArgs e)
-        {
-            if (e.Source is TabControl) LoadViews();
-        }
-
-        private void LoadViews()
-        {
-            var deviceTag = (DeviceList.SelectedItem as ListBoxItem)?.Tag as string;
-            
-            // Skip loading tabs for DIMS settings
-            if (deviceTag == "DIMS")
-                return;
-                
-            var tabHeader = (ActionTabs.SelectedItem as TabItem)?.Header as string;
-
-            StageContentHost.Content = null;
-            CalibContentHost.Content = null;
-
-            if (tabHeader == "Stage Setup")
-            {
-                StageContentHost.Content = new TextBlock
-                {
-                    Text = "Stage Setup not implemented for this device.",
-                    Foreground = Brushes.Gray,
-                    Margin = new Thickness(12)
-                };
-            }
-            else if (tabHeader == "Calibration")
-            {
-                CalibContentHost.Content = new TextBlock
-                {
-                    Text = "Calibration not implemented for this device.",
-                    Foreground = Brushes.Gray,
-                    Margin = new Thickness(12)
-                };
-            }
-        }
-
-        #region DIMS Settings Management
 
         /// <summary>
         /// Load DIMS settings from Properties.Settings into UI controls
@@ -119,7 +32,7 @@ namespace EasySnapApp.Views
                 txtOptInfo8.Text = settings.OptInfo8;
                 txtUpdated.Text = settings.Updated;
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 MessageBox.Show($"Failed to load DIMS settings: {ex.Message}", "Settings Error", 
                     MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -152,8 +65,11 @@ namespace EasySnapApp.Views
                 
                 MessageBox.Show("DIMS export settings saved successfully.", "Settings Saved", 
                     MessageBoxButton.OK, MessageBoxImage.Information);
+                
+                DialogResult = true;
+                Close();
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 MessageBox.Show($"Failed to save DIMS settings: {ex.Message}", "Save Error", 
                     MessageBoxButton.OK, MessageBoxImage.Error);
@@ -194,6 +110,13 @@ namespace EasySnapApp.Views
             txtUpdated.Text = "N";
         }
 
-        #endregion
+        /// <summary>
+        /// Cancel without saving
+        /// </summary>
+        private void Cancel_Click(object sender, RoutedEventArgs e)
+        {
+            DialogResult = false;
+            Close();
+        }
     }
 }

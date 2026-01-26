@@ -34,5 +34,39 @@
     <Setting Name="CameraImageFormat" Type="System.String" Scope="User">
       <Value Profile="(Default)">JPEG</Value>
     </Setting>
+    <Setting Name="LastPartNumber" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <!-- DIMS Export Settings -->
+    <Setting Name="DimsSiteId" Type="System.String" Scope="User">
+      <Value Profile="(Default)">733</Value>
+    </Setting>
+    <Setting Name="DimsFactor" Type="System.String" Scope="User">
+      <Value Profile="(Default)">166</Value>
+    </Setting>
+    <Setting Name="DimsDimUnit" Type="System.String" Scope="User">
+      <Value Profile="(Default)">in</Value>
+    </Setting>
+    <Setting Name="DimsWgtUnit" Type="System.String" Scope="User">
+      <Value Profile="(Default)">lb</Value>
+    </Setting>
+    <Setting Name="DimsVolUnit" Type="System.String" Scope="User">
+      <Value Profile="(Default)">in</Value>
+    </Setting>
+    <Setting Name="DimsOptInfo2" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Y</Value>
+    </Setting>
+    <Setting Name="DimsOptInfo3" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Y</Value>
+    </Setting>
+    <Setting Name="DimsOptInfo8" Type="System.String" Scope="User">
+      <Value Profile="(Default)">0</Value>
+    </Setting>
+    <Setting Name="DimsUpdated" Type="System.String" Scope="User">
+      <Value Profile="(Default)">N</Value>
+    </Setting>
+    <Setting Name="DimsEnableOverride" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

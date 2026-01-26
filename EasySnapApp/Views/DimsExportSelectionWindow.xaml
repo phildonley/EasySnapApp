@@ -1,0 +1,43 @@
+﻿<Window x:Class="EasySnapApp.Views.DimsExportSelectionWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Select Parts for DIMS Export" Height="400" Width="600"
+        Background="#1E1E22" Foreground="#F0F0F0" FontFamily="Segoe UI" FontSize="13"
+        WindowStartupLocation="CenterOwner">
+    
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <TextBlock Grid.Row="0" Text="Select parts to include in DIMS export:"
+                   FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
+        
+        <DataGrid Grid.Row="1" x:Name="dgPartSelection" AutoGenerateColumns="False"
+                  Background="#2A2A2E" Foreground="#F0F0F0" HeadersVisibility="Column"
+                  GridLinesVisibility="Horizontal" CanUserAddRows="False" IsReadOnly="False">
+            <DataGrid.Columns>
+                <DataGridCheckBoxColumn Header="Export" Binding="{Binding IsSelected}" Width="60"/>
+                <DataGridTextColumn Header="Part Number" Binding="{Binding PartNumber}" Width="*" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Images" Binding="{Binding ImageCount}" Width="70" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Date Range" Binding="{Binding DateRange}" Width="120" IsReadOnly="True"/>
+            </DataGrid.Columns>
+        </DataGrid>
+        
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,10">
+            <Button Content="Select All" Click="SelectAll_Click" Margin="0,0,10,0" Padding="8,4"/>
+            <Button Content="Select None" Click="SelectNone_Click" Padding="8,4"/>
+            <TextBlock x:Name="txtSummary" Text="Summary" VerticalAlignment="Center" 
+                       Margin="20,0,0,0" Foreground="#AAAAAA"/>
+        </StackPanel>
+        
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button Content="Export Selected" Click="Export_Click" Background="#007ACC" 
+                    Foreground="White" Padding="12,6" Margin="0,0,10,0"/>
+            <Button Content="Cancel" Click="Cancel_Click" Padding="12,6"/>
+        </StackPanel>
+    </Grid>
+</Window>

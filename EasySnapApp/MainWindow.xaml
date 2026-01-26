@@ -39,10 +39,14 @@
             </MenuItem>
             <MenuItem Header="_Edit"/>
             <MenuItem Header="_Settings">
+                <MenuItem Header="DIMS Export Settings..." Click="OpenSettings_Click"/>
+                <Separator/>
                 <MenuItem Header="General Settings..." Click="GeneralSettings_Click"/>
                 <Separator/>
-
                 <MenuItem Header="Photography Tools..." Click="PhotographyTools_Click"/>
+            </MenuItem>
+            <MenuItem Header="_Export">
+                <MenuItem Header="Export Images..." Click="OpenExportWindow_Click"/>
             </MenuItem>
             <MenuItem Header="_Help">
                 <MenuItem Header="About..." Click="About_Click"/>

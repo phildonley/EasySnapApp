@@ -38,6 +38,8 @@
 		<Compile Include="App.xaml.cs">
 			<DependentUpon>App.xaml</DependentUpon>
 		</Compile>
+		<Compile Include="Properties\AssemblyInfo.cs" />
+		<Compile Include="Properties\Resources.Designer.cs" />
 		<Compile Include="Views\DeviceSettingsWindow.xaml.cs" />
 		<Compile Include="Views\GeneralSettingsWindow.xaml.cs" />
 		<Compile Include="Views\MeasurementToolsWindow.xaml.cs" />
@@ -48,6 +50,15 @@
 		<Compile Include="Views\Settings\Measurement\MeasurementGeneralSettingsControl.xaml.cs" />
 		<Compile Include="Views\Settings\Measurement\MultiCamSettingsControl.xaml.cs" />
 		<Compile Include="Views\TestWindow.xaml.cs" />
+		<Compile Include="Views\DimsExportSelectionWindow.xaml.cs">
+			<DependentUpon>DimsExportSelectionWindow.xaml</DependentUpon>
+		</Compile>
+		<Compile Include="Views\DimsExportSettingsWindow.xaml.cs">
+			<DependentUpon>DimsExportSettingsWindow.xaml</DependentUpon>
+		</Compile>
+		<Compile Include="Views\ExportWindow.xaml.cs">
+			<DependentUpon>ExportWindow.xaml</DependentUpon>
+		</Compile>
 
 		<!-- Main Window -->
 		<Page Include="MainWindow.xaml">
@@ -93,6 +104,18 @@
 		<Page Include="Views\TestWindow.xaml">
 		  <Generator>MSBuild:Compile</Generator>
 		</Page>
+		<Page Include="Views\DimsExportSelectionWindow.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		  <SubType>Designer</SubType>
+		</Page>
+		<Page Include="Views\DimsExportSettingsWindow.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		  <SubType>Designer</SubType>
+		</Page>
+		<Page Include="Views\ExportWindow.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		  <SubType>Designer</SubType>
+		</Page>
 
 	</ItemGroup>
 
@@ -100,13 +123,22 @@
 	<ItemGroup>
 		<Compile Include="IsExternalInit.cs" />
 
+		<Compile Include="Models\ImageRecord.cs" />
+		<Compile Include="Models\ExportOptions.cs" />
+		<Compile Include="Models\DimsExportSettings.cs" />
 		<Compile Include="Models\ScanResult.cs" />
+		<Compile Include="Repositories\IImageRepository.cs" />
+		<Compile Include="Repositories\SQLiteImageRepository.cs" />
+		<Compile Include="Services\ExportService.cs" />
+		<Compile Include="Utilities\SampleDataCreator.cs" />
 		<Compile Include="Utils\CsvWriter.cs" />
 		<Compile Include="Services\BarcodeScannerService.cs" />
 		<Compile Include="Services\ScaleService.cs" />
 		<Compile Include="Services\CanonCameraService.cs" />
 		<Compile Include="Services\CanonEdSdkNative.cs" />
 		<Compile Include="Services\CanonSdkTest.cs" />
+		<Compile Include="Data\EasySnapDb.cs" />
+		<Compile Include="Data\CaptureRepository.cs" />
 
 		<Compile Include="Services\ScanSessionManager.cs" />
 		<Compile Include="Services\ThermalScannerService.cs" />
@@ -130,11 +162,14 @@
 	<!-- NuGet packages -->
 	<ItemGroup>
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+		<PackageReference Include="System.Data.SQLite" Version="1.0.118" />
 	</ItemGroup>
 
 	<!-- Framework references -->
 	<ItemGroup>
 		<Reference Include="System.Windows.Forms" />
+		<Reference Include="System.IO.Compression" />
+		<Reference Include="System.IO.Compression.FileSystem" />
 	</ItemGroup>
 
 	<!-- Embedded resources -->
