@@ -6,6 +6,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using EasySnapApp.Models;
 using EasySnapApp.Services;
@@ -21,6 +22,10 @@ namespace EasySnapApp
     {
         private readonly ScanSessionManager _sessionManager;
         private readonly ObservableCollection<ScanResult> _results;
+        
+        // PHASE 3.9: Enhanced UI collections
+        private readonly ObservableCollection<ImageRecordViewModel> _imageRecords;
+        private bool _isUpdatingSelection = false; // Prevent infinite loops in selection sync
 
         // PHASE 2: Database persistence
         private readonly EasySnapDb _database;
@@ -99,8 +104,11 @@ namespace EasySnapApp
 
             // Bind results
             _results = new ObservableCollection<ScanResult>();
-            SessionDataGrid.ItemsSource = _results;
-            ThumbnailBar.ItemsSource = _results;
+            
+            // PHASE 3.9: Initialize enhanced collections
+            _imageRecords = new ObservableCollection<ImageRecordViewModel>();
+            SessionDataGrid.ItemsSource = _imageRecords;
+            ThumbnailBar.ItemsSource = _imageRecords;
 
             StatusTextBlock.Text = "Ready.";
             LogSessionMessage("EasySnap started. Ready for part capture.");
@@ -120,8 +128,8 @@ namespace EasySnapApp
             // STEP 2: Connect to camera for real tethering
             InitializeCameraConnection();
             
-            // PHASE 2: Load last session from database
-            LoadLastSessionFromDatabase();
+            // PHASE 3.9: Load all captures from database (persistent gallery)
+            LoadAllCapturesFromDatabase();
             
             // PHASE 3: Initialize export features (NO MORE SAMPLE DATA)
             InitializePhase3Features();
@@ -275,61 +283,66 @@ namespace EasySnapApp
         #region PHASE 2: Database Session Loading
         
         /// <summary>
-        /// PHASE 2: Load the last session from database on startup
+        /// PHASE 3.9: Load ALL captures from database on startup (persistent gallery)
         /// </summary>
-        private void LoadLastSessionFromDatabase()
+        private void LoadAllCapturesFromDatabase()
         {
             try
             {
                 if (_repository == null)
                 {
-                    LogSessionMessage("DB not available - skipping session load");
+                    LogSessionMessage("DB not available - skipping capture load");
                     return;
                 }
                 
-                // Try to get last part number from settings, fallback to most recent session
-                var lastPartNumber = Properties.Settings.Default.LastPartNumber;
-                CaptureSession sessionToLoad = null;
+                // Load ALL captures across all parts, newest first
+                var allImages = _repository.GetAllImagesNewestFirst();
+                LogSessionMessage($"Loading {allImages.Count} captures from database (all parts)");
                 
-                if (!string.IsNullOrEmpty(lastPartNumber))
+                _imageRecords.Clear();
+                
+                foreach (var dbImage in allImages)
                 {
-                    sessionToLoad = _repository.GetOrCreateActiveSession(lastPartNumber);
-                    LogSessionMessage($"Loaded session for saved part number: {lastPartNumber}");
-                }
-                else
-                {
-                    sessionToLoad = _repository.GetMostRecentSession();
-                    if (sessionToLoad != null)
+                    try
                     {
-                        LogSessionMessage($"Loaded most recent session: {sessionToLoad.PartNumber}");
+                        var viewModel = ImageRecordViewModel.FromCapturedImage(dbImage);
+                        
+                        // Load thumbnail image (non-blocking)
+                        LoadThumbnailForViewModel(viewModel);
+                        
+                        _imageRecords.Add(viewModel);
+                    }
+                    catch (Exception ex)
+                    {
+                        LogSessionMessage($"Failed to load image {Path.GetFileName(dbImage.FullPath)}: {ex.Message}");
                     }
                 }
                 
-                if (sessionToLoad != null)
+                // Restore last part number to text box for continued work
+                var lastPartNumber = Properties.Settings.Default.LastPartNumber;
+                if (!string.IsNullOrEmpty(lastPartNumber))
                 {
-                    _currentSession = sessionToLoad;
-                    _currentPartNumber = sessionToLoad.PartNumber;
+                    PartNumberTextBox.Text = lastPartNumber;
+                    _currentPartNumber = lastPartNumber;
                     
-                    // Update UI with part number
-                    PartNumberTextBox.Text = _currentPartNumber;
-                    
-                    // Load images from database
-                    LoadImagesFromDatabase(_currentPartNumber);
-                    
-                    // Set camera session context for automatic capture
+                    // Set up camera context for the last part
                     var exports = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Exports");
-                    _cameraSvc.SetSessionContext(_currentPartNumber, () => GetNextSequenceForPart(_currentPartNumber), exports);
-                    
-                    LogSessionMessage($"Session restored: {_currentPartNumber} with {_results.Count} images");
+                    _cameraSvc.SetSessionContext(lastPartNumber, () => GetNextSequenceForPart(lastPartNumber), exports);
                 }
-                else
+                
+                // Auto-select the newest item if any exist
+                if (_imageRecords.Count > 0)
                 {
-                    LogSessionMessage("No previous session found - ready for new session");
+                    _imageRecords[0].IsSelected = true;
+                    SessionDataGrid.SelectedItem = _imageRecords[0];
+                    SessionDataGrid.ScrollIntoView(_imageRecords[0]);
                 }
+                
+                LogSessionMessage($"Loaded {_imageRecords.Count} captures across {_imageRecords.GroupBy(x => x.PartNumber).Count()} parts");
             }
             catch (Exception ex)
             {
-                LogSessionMessage($"LoadLastSessionFromDatabase error: {ex.Message}");
+                LogSessionMessage($"LoadAllCapturesFromDatabase error: {ex.Message}");
             }
         }
         
@@ -433,6 +446,37 @@ namespace EasySnapApp
             {
                 LogSessionMessage($"Failed to load thumbnail for {result.ImageFileName}: {ex.Message}");
                 result.ThumbnailImage = null;
+            }
+        }
+        
+        /// <summary>
+        /// PHASE 3.9: Load thumbnail for enhanced view model (non-blocking)
+        /// </summary>
+        private void LoadThumbnailForViewModel(ImageRecordViewModel viewModel)
+        {
+            try
+            {
+                // Try thumbnail first
+                if (!string.IsNullOrEmpty(viewModel.ThumbPath) && File.Exists(viewModel.ThumbPath))
+                {
+                    viewModel.ThumbnailImage = LoadImageSafely(viewModel.ThumbPath);
+                }
+                // Fallback to full image (slower but functional)
+                else if (!string.IsNullOrEmpty(viewModel.FullPath) && File.Exists(viewModel.FullPath))
+                {
+                    viewModel.ThumbnailImage = LoadImageSafely(viewModel.FullPath);
+                }
+                // If no file exists, use placeholder
+                else
+                {
+                    // Could load a "missing file" placeholder here
+                    viewModel.ThumbnailImage = null;
+                }
+            }
+            catch (Exception ex)
+            {
+                LogSessionMessage($"Failed to load thumbnail for {viewModel.FileName}: {ex.Message}");
+                viewModel.ThumbnailImage = null;
             }
         }
         
@@ -1105,17 +1149,28 @@ namespace EasySnapApp
 
         private void SessionDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (SessionDataGrid.SelectedItem is ScanResult sel)
+            if (_isUpdatingSelection) return;
+            
+            if (SessionDataGrid.SelectedItem is ImageRecordViewModel sel)
+            {
+                SyncSelection(sel);
+                
+                // Load the part-level values into the left pane (so you can edit quickly)
+                if (!string.IsNullOrWhiteSpace(sel.PartNumber))
+                    LoadPartDataIntoPane(sel.PartNumber);
+            }
+            // Legacy support for ScanResult
+            else if (SessionDataGrid.SelectedItem is ScanResult scanResult)
             {
                 // PHASE 1: Use FullImagePath if available, fallback to old logic
-                string fullPath = sel.FullImagePath;
+                string fullPath = scanResult.FullImagePath;
                 if (string.IsNullOrEmpty(fullPath))
                 {
                     // Fallback to old path construction for backwards compatibility
                     fullPath = Path.Combine(
                         AppDomain.CurrentDomain.BaseDirectory,
                         "Exports",
-                        sel.ImageFileName);
+                        scanResult.ImageFileName);
                 }
 
                 if (File.Exists(fullPath))
@@ -1137,20 +1192,29 @@ namespace EasySnapApp
 
                 // Update metadata text
                 PreviewMetaTextBlock.Text =
-                    $"Part: {sel.PartNumber}   Seq: {sel.Sequence}   File: {sel.ImageFileName}   Time: {sel.TimeStamp}";
+                    $"Part: {scanResult.PartNumber}   Seq: {scanResult.Sequence}   File: {scanResult.ImageFileName}   Time: {scanResult.TimeStamp}";
 
                 // Load the part-level values into the left pane (so you can edit quickly)
-                if (!string.IsNullOrWhiteSpace(sel.PartNumber))
-                    LoadPartDataIntoPane(sel.PartNumber);
+                if (!string.IsNullOrWhiteSpace(scanResult.PartNumber))
+                    LoadPartDataIntoPane(scanResult.PartNumber);
             }
         }
 
         private void Thumbnail_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-            if (sender is System.Windows.Controls.Image img && img.DataContext is ScanResult result)
+            if (sender is System.Windows.Controls.Image img)
             {
-                SessionDataGrid.SelectedItem = result;
-                SessionDataGrid.ScrollIntoView(result);
+                if (img.DataContext is ImageRecordViewModel viewModel)
+                {
+                    SyncSelection(viewModel);
+                    SessionDataGrid.ScrollIntoView(viewModel);
+                }
+                // Legacy support
+                else if (img.DataContext is ScanResult result)
+                {
+                    SessionDataGrid.SelectedItem = result;
+                    SessionDataGrid.ScrollIntoView(result);
+                }
             }
         }
 
@@ -1469,6 +1533,304 @@ namespace EasySnapApp
                 MessageBox.Show($"Error opening Export window: {ex.Message}", "Error", 
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+        
+        #endregion
+        
+        #region Phase 3.9: Barcode UX Improvements
+        
+        /// <summary>
+        /// Phase 3.9: Handle Enter key in part number textbox to trigger New session
+        /// </summary>
+        private void PartNumberTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                try
+                {
+                    // Trigger New button click safely
+                    NewButton_Click(sender, new RoutedEventArgs());
+                    e.Handled = true;
+                }
+                catch (Exception ex)
+                {
+                    LogSessionMessage($"Enter key handler error: {ex.Message}");
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Phase 3.9: Auto-select all text when part number textbox receives focus
+        /// </summary>
+        private void PartNumberTextBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            try
+            {
+                if (sender is TextBox textBox)
+                {
+                    textBox.SelectAll();
+                }
+            }
+            catch (Exception ex)
+            {
+                LogSessionMessage($"Focus handler error: {ex.Message}");
+            }
+        }
+        
+        #endregion
+        
+        #region Phase 3.9: Enhanced UI Features
+        
+        /// <summary>
+        /// Phase 3.9: Enhanced selection sync between thumbnail and data grid
+        /// </summary>
+        private void SyncSelection(ImageRecordViewModel selectedItem)
+        {
+            if (_isUpdatingSelection || selectedItem == null) return;
+            
+            try
+            {
+                _isUpdatingSelection = true;
+                
+                // Clear all selections
+                foreach (var item in _imageRecords)
+                {
+                    item.IsSelected = false;
+                }
+                
+                // Set the selected item
+                selectedItem.IsSelected = true;
+                
+                // Update both controls
+                SessionDataGrid.SelectedItem = selectedItem;
+                // Note: ThumbnailBar will update automatically via binding
+                
+                // Update preview image
+                UpdatePreviewImage(selectedItem);
+            }
+            finally
+            {
+                _isUpdatingSelection = false;
+            }
+        }
+        
+        /// <summary>
+        /// Phase 3.9: Update preview image for selected item
+        /// </summary>
+        private void UpdatePreviewImage(ImageRecordViewModel selectedItem)
+        {
+            if (selectedItem == null) return;
+            
+            string fullPath = selectedItem.FullPath;
+            if (File.Exists(fullPath))
+            {
+                try
+                {
+                    PreviewImage.Source = LoadImageSafely(fullPath);
+                }
+                catch
+                {
+                    PreviewImage.Source = null;
+                }
+            }
+            else
+            {
+                PreviewImage.Source = null;
+            }
+            
+            // Update metadata text
+            PreviewMetaTextBlock.Text = 
+                $"Part: {selectedItem.PartNumber}   Seq: {selectedItem.Sequence}   File: {selectedItem.FileName}   Time: {selectedItem.TimeStamp}";
+        }
+        
+        /// <summary>
+        /// Phase 3.9: Safe delete with confirmation
+        /// </summary>
+        private void DeleteSelectedCaptures()
+        {
+            var selectedItems = _imageRecords.Where(x => x.IsSelected).ToList();
+            if (selectedItems.Count == 0)
+            {
+                LogSessionMessage("No captures selected for deletion");
+                return;
+            }
+            
+            // Confirmation dialog for multiple items
+            if (selectedItems.Count > 1)
+            {
+                var result = MessageBox.Show(
+                    $"You are deleting {selectedItems.Count} images permanently. This cannot be undone. Continue?",
+                    "Confirm Deletion",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+                    
+                if (result != MessageBoxResult.Yes)
+                    return;
+            }
+            
+            try
+            {
+                var imageIds = selectedItems.Where(x => !string.IsNullOrEmpty(x.ImageId))
+                                          .Select(x => x.ImageId)
+                                          .ToList();
+                
+                if (imageIds.Count > 0)
+                {
+                    // Delete from database and files
+                    _repository.DeleteCaptures(imageIds, LogSessionMessage);
+                }
+                
+                // Remove from UI collection
+                foreach (var item in selectedItems)
+                {
+                    _imageRecords.Remove(item);
+                }
+                
+                // Select next item if available
+                if (_imageRecords.Count > 0)
+                {
+                    var nextItem = _imageRecords.FirstOrDefault();
+                    if (nextItem != null)
+                    {
+                        SyncSelection(nextItem);
+                    }
+                }
+                
+                LogSessionMessage($"Deleted {selectedItems.Count} captures successfully");
+                StatusTextBlock.Text = $"Deleted {selectedItems.Count} captures";
+            }
+            catch (Exception ex)
+            {
+                LogSessionMessage($"Delete operation failed: {ex.Message}");
+                MessageBox.Show($"Delete failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        
+        /// <summary>
+        /// Phase 3.9: Handle key events for deletion
+        /// </summary>
+        protected override void OnPreviewKeyDown(KeyEventArgs e)
+        {
+            if (e.Key == Key.Delete || e.Key == Key.Back)
+            {
+                // Check if we're focused on the data grid or thumbnail area
+                var focusedElement = Keyboard.FocusedElement;
+                if (focusedElement == SessionDataGrid || 
+                    IsDescendantOf(focusedElement as DependencyObject, SessionDataGrid) ||
+                    IsDescendantOf(focusedElement as DependencyObject, ThumbnailBar))
+                {
+                    DeleteSelectedCaptures();
+                    e.Handled = true;
+                    return;
+                }
+            }
+            
+            base.OnPreviewKeyDown(e);
+        }
+        
+        /// <summary>
+        /// Helper to check if element is descendant of parent
+        /// </summary>
+        private bool IsDescendantOf(DependencyObject child, DependencyObject parent)
+        {
+            if (child == null || parent == null) return false;
+            
+            var current = child;
+            while (current != null)
+            {
+                if (current == parent) return true;
+                current = VisualTreeHelper.GetParent(current);
+            }
+            return false;
+        }
+        
+        /// <summary>
+        /// Phase 3.9: Optional collapse parts setting (infrastructure only)
+        /// </summary>
+        private bool AutoCollapseParts
+        {
+            get { return Properties.Settings.Default.AutoCollapseParts; }
+            set 
+            { 
+                Properties.Settings.Default.AutoCollapseParts = value;
+                Properties.Settings.Default.Save();
+                LogSessionMessage($"AutoCollapseParts setting: {value}");
+            }
+        }
+        
+        /// <summary>
+        /// Phase 3.9: Enhanced photo saved handler with new view model
+        /// </summary>
+        private void OnCameraPhotoSavedEnhanced(string fullImagePath, string thumbnailPath)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                try
+                {
+                    LogSessionMessage($"Photo saved with thumbnail: {fullImagePath}");
+                    
+                    var partNumber = ExtractPartNumberFromPath(fullImagePath);
+                    if (string.IsNullOrEmpty(partNumber))
+                    {
+                        LogSessionMessage("Could not determine part number from photo path");
+                        return;
+                    }
+                    
+                    // Save to database first
+                    if (_repository != null)
+                    {
+                        try
+                        {
+                            var sequence = GetSequenceFromFilename(fullImagePath);
+                            var fileInfo = new FileInfo(fullImagePath);
+                            
+                            var capturedImage = new CapturedImage
+                            {
+                                ImageId = Guid.NewGuid().ToString(),
+                                SessionId = _currentSession?.SessionId ?? Guid.NewGuid().ToString(),
+                                PartNumber = partNumber,
+                                Sequence = sequence,
+                                FullPath = fullImagePath,
+                                ThumbPath = thumbnailPath,
+                                CaptureTimeUtc = DateTime.UtcNow,
+                                FileSizeBytes = fileInfo.Length,
+                                IsDeleted = false
+                            };
+                            
+                            _repository.InsertCapturedImage(capturedImage);
+                            
+                            // Create view model and add to UI
+                            var viewModel = ImageRecordViewModel.FromCapturedImage(capturedImage);
+                            LoadThumbnailForViewModel(viewModel);
+                            
+                            // Apply part-level measurements if available
+                            if (_partData.TryGetValue(partNumber, out var partData))
+                            {
+                                viewModel.LengthIn = partData.LengthIn;
+                                viewModel.DepthIn = partData.WidthIn;
+                                viewModel.HeightIn = partData.HeightIn;
+                                viewModel.WeightLb = partData.WeightLb;
+                            }
+                            
+                            // Insert at the top (newest first)
+                            _imageRecords.Insert(0, viewModel);
+                            
+                            // Auto-select the new item
+                            SyncSelection(viewModel);
+                            
+                            LogSessionMessage($"Added new capture: {viewModel.DisplayName}");
+                        }
+                        catch (Exception dbEx)
+                        {
+                            LogSessionMessage($"DB insert failed: {dbEx.Message}");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogSessionMessage($"Enhanced photo saved handler error: {ex.Message}");
+                }
+            });
         }
         
         #endregion

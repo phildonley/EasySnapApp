@@ -274,5 +274,17 @@ namespace EasySnapApp.Properties {
                 this["DimsEnableOverride"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool AutoCollapseParts {
+            get {
+                return ((bool)(this["AutoCollapseParts"]));
+            }
+            set {
+                this["AutoCollapseParts"] = value;
+            }
+        }
     }
 }

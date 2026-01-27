@@ -73,7 +73,9 @@
                    FontWeight="Bold"/>
             <TextBox x:Name="PartNumberTextBox"
                      Width="240"
-                     Margin="4,0,16,0"/>
+                     Margin="4,0,16,0"
+                     PreviewKeyDown="PartNumberTextBox_PreviewKeyDown"
+                     GotKeyboardFocus="PartNumberTextBox_GotKeyboardFocus"/>
             <Button x:Name="NewButton"
                     Content="New"
                     Click="NewButton_Click"
