@@ -102,7 +102,8 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border BorderBrush="#444"
+                            <Border x:Name="ThumbnailBorder"
+                                    BorderBrush="#444"
                                     BorderThickness="1"
                                     Margin="4"
                                     Background="#2A2A2E">
@@ -123,6 +124,15 @@
                                                Margin="6,0,6,6"/>
                                 </StackPanel>
                             </Border>
+                            
+                            <!-- Selection Highlighting Triggers -->
+                            <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                    <Setter TargetName="ThumbnailBorder" Property="BorderBrush" Value="#0078D4"/>
+                                    <Setter TargetName="ThumbnailBorder" Property="BorderThickness" Value="3"/>
+                                    <Setter TargetName="ThumbnailBorder" Property="Background" Value="#3A3A4E"/>
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>

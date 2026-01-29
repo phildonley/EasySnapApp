@@ -92,7 +92,7 @@ namespace EasySnapApp
             _cameraSvc = new CanonCameraService(exports);
             _cameraSvc.Log += message => Dispatcher.Invoke(() => LogSessionMessage(message));
             _cameraSvc.PhotoSaved += OnCameraPhotoSaved;
-            _cameraSvc.PhotoSavedWithThumbnail += OnCameraPhotoSavedWithThumbnail; // PHASE 1
+            _cameraSvc.PhotoSavedWithThumbnail += OnCameraPhotoSavedEnhanced; // PHASE 1
             _thermalSvc = new ThermalScannerService();
             _intelSvc = new IntelIntellisenseService();
             _laserSvc = new LaserArrayService();
@@ -1151,16 +1151,42 @@ namespace EasySnapApp
         {
             if (_isUpdatingSelection) return;
             
-            if (SessionDataGrid.SelectedItem is ImageRecordViewModel sel)
+            _isUpdatingSelection = true;
+            try
             {
-                SyncSelection(sel);
+                // Handle multiple selection sync
+                var selectedViewModels = SessionDataGrid.SelectedItems.Cast<ImageRecordViewModel>().ToList();
                 
-                // Load the part-level values into the left pane (so you can edit quickly)
-                if (!string.IsNullOrWhiteSpace(sel.PartNumber))
-                    LoadPartDataIntoPane(sel.PartNumber);
+                // Clear all thumbnail selections
+                foreach (var item in _imageRecords)
+                {
+                    item.IsSelected = false;
+                }
+                
+                // Set selected thumbnails
+                foreach (var selectedItem in selectedViewModels)
+                {
+                    selectedItem.IsSelected = true;
+                }
+                
+                // Update preview with first selected item
+                var firstSelected = selectedViewModels.FirstOrDefault();
+                if (firstSelected != null)
+                {
+                    UpdatePreviewImage(firstSelected);
+                    
+                    // Load the part-level values into the left pane
+                    if (!string.IsNullOrWhiteSpace(firstSelected.PartNumber))
+                        LoadPartDataIntoPane(firstSelected.PartNumber);
+                }
             }
-            // Legacy support for ScanResult
-            else if (SessionDataGrid.SelectedItem is ScanResult scanResult)
+            finally
+            {
+                _isUpdatingSelection = false;
+            }
+            
+            // Legacy support for ScanResult (single selection only)
+            if (SessionDataGrid.SelectedItem is ScanResult scanResult)
             {
                 // PHASE 1: Use FullImagePath if available, fallback to old logic
                 string fullPath = scanResult.FullImagePath;
@@ -1206,7 +1232,86 @@ namespace EasySnapApp
             {
                 if (img.DataContext is ImageRecordViewModel viewModel)
                 {
-                    SyncSelection(viewModel);
+                    // Multi-select support
+                    bool isCtrlPressed = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
+                    bool isShiftPressed = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
+                    
+                    if (isCtrlPressed)
+                    {
+                        // Ctrl+Click: Toggle selection
+                        viewModel.IsSelected = !viewModel.IsSelected;
+                        
+                        // Update DataGrid selection
+                        _isUpdatingSelection = true;
+                        try
+                        {
+                            if (viewModel.IsSelected)
+                            {
+                                if (!SessionDataGrid.SelectedItems.Contains(viewModel))
+                                    SessionDataGrid.SelectedItems.Add(viewModel);
+                            }
+                            else
+                            {
+                                SessionDataGrid.SelectedItems.Remove(viewModel);
+                            }
+                        }
+                        finally
+                        {
+                            _isUpdatingSelection = false;
+                        }
+                        
+                        // Update preview to first selected item
+                        var firstSelected = _imageRecords.FirstOrDefault(x => x.IsSelected);
+                        if (firstSelected != null)
+                            UpdatePreviewImage(firstSelected);
+                    }
+                    else if (isShiftPressed)
+                    {
+                        // Shift+Click: Range selection
+                        var lastSelected = SessionDataGrid.SelectedItem as ImageRecordViewModel;
+                        if (lastSelected != null)
+                        {
+                            var startIndex = _imageRecords.IndexOf(lastSelected);
+                            var endIndex = _imageRecords.IndexOf(viewModel);
+                            
+                            if (startIndex >= 0 && endIndex >= 0)
+                            {
+                                var minIndex = Math.Min(startIndex, endIndex);
+                                var maxIndex = Math.Max(startIndex, endIndex);
+                                
+                                _isUpdatingSelection = true;
+                                try
+                                {
+                                    // Clear existing selections
+                                    foreach (var item in _imageRecords)
+                                        item.IsSelected = false;
+                                    SessionDataGrid.SelectedItems.Clear();
+                                    
+                                    // Select range
+                                    for (int i = minIndex; i <= maxIndex; i++)
+                                    {
+                                        _imageRecords[i].IsSelected = true;
+                                        SessionDataGrid.SelectedItems.Add(_imageRecords[i]);
+                                    }
+                                }
+                                finally
+                                {
+                                    _isUpdatingSelection = false;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // No previous selection, treat as single click
+                            SyncSelection(viewModel);
+                        }
+                    }
+                    else
+                    {
+                        // Normal click: Single selection
+                        SyncSelection(viewModel);
+                    }
+                    
                     SessionDataGrid.ScrollIntoView(viewModel);
                 }
                 // Legacy support
