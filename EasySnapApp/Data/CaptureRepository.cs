@@ -35,6 +35,7 @@ namespace EasySnapApp.Data
         public double? DimY { get; set; }
         public double? DimZ { get; set; }
         public bool IsDeleted { get; set; }
+        public DateTime? DeletedAt { get; set; }
     }
 
     /// <summary>
@@ -210,9 +211,9 @@ namespace EasySnapApp.Data
                 var selectSql = @"
                     SELECT ImageId, SessionId, PartNumber, Sequence, FullPath, ThumbPath,
                            CaptureTimeUtc, FileSizeBytes, WidthPx, HeightPx, WeightGrams,
-                           DimX, DimY, DimZ, IsDeleted
+                           DimX, DimY, DimZ, IsDeleted, DeletedAt
                     FROM CapturedImages 
-                    WHERE IsDeleted = 0 AND PartNumber = @partNumber
+                    WHERE IsDeleted = 0 AND DeletedAt IS NULL AND PartNumber = @partNumber
                     ORDER BY Sequence DESC";
 
                 using (var command = new SQLiteCommand(selectSql, connection))
@@ -238,7 +239,8 @@ namespace EasySnapApp.Data
                                 DimX = reader.IsDBNull(11) ? null : (double?)reader.GetDouble(11), // DimX
                                 DimY = reader.IsDBNull(12) ? null : (double?)reader.GetDouble(12), // DimY
                                 DimZ = reader.IsDBNull(13) ? null : (double?)reader.GetDouble(13), // DimZ
-                                IsDeleted = reader.GetInt32(14) == 1 // IsDeleted
+                                IsDeleted = reader.GetInt32(14) == 1, // IsDeleted
+                                DeletedAt = reader.IsDBNull(15) ? null : (DateTime?)DateTime.Parse(reader.GetString(15)) // DeletedAt
                             });
                         }
                     }
@@ -262,7 +264,7 @@ namespace EasySnapApp.Data
                 var selectSql = @"
                     SELECT Sequence 
                     FROM CapturedImages 
-                    WHERE PartNumber = @partNumber AND IsDeleted = 0
+                    WHERE PartNumber = @partNumber AND IsDeleted = 0 AND DeletedAt IS NULL
                     ORDER BY Sequence ASC";
 
                 var existingSequences = new List<int>();
@@ -349,9 +351,9 @@ namespace EasySnapApp.Data
                 var selectSql = @"
                     SELECT ImageId, SessionId, PartNumber, Sequence, FullPath, ThumbPath,
                            CaptureTimeUtc, FileSizeBytes, WidthPx, HeightPx, WeightGrams,
-                           DimX, DimY, DimZ, IsDeleted
+                           DimX, DimY, DimZ, IsDeleted, DeletedAt
                     FROM CapturedImages 
-                    WHERE IsDeleted = 0
+                    WHERE IsDeleted = 0 AND DeletedAt IS NULL
                     ORDER BY PartNumber ASC, Sequence ASC";
 
                 using (var command = new SQLiteCommand(selectSql, connection))
@@ -376,7 +378,8 @@ namespace EasySnapApp.Data
                                 DimX = reader.IsDBNull(11) ? null : (double?)reader.GetDouble(11), // DimX
                                 DimY = reader.IsDBNull(12) ? null : (double?)reader.GetDouble(12), // DimY
                                 DimZ = reader.IsDBNull(13) ? null : (double?)reader.GetDouble(13), // DimZ
-                                IsDeleted = reader.GetInt32(14) == 1 // IsDeleted
+                                IsDeleted = reader.GetInt32(14) == 1, // IsDeleted
+                                DeletedAt = reader.IsDBNull(15) ? null : (DateTime?)DateTime.Parse(reader.GetString(15)) // DeletedAt
                             });
                         }
                     }
@@ -400,7 +403,7 @@ namespace EasySnapApp.Data
                 var selectSql = @"
                     SELECT DISTINCT PartNumber 
                     FROM CapturedImages 
-                    WHERE IsDeleted = 0
+                    WHERE IsDeleted = 0 AND DeletedAt IS NULL
                     ORDER BY PartNumber ASC";
 
                 using (var command = new SQLiteCommand(selectSql, connection))
@@ -457,9 +460,9 @@ namespace EasySnapApp.Data
                 var selectSql = @"
                     SELECT ImageId, SessionId, PartNumber, Sequence, FullPath, ThumbPath,
                            CaptureTimeUtc, FileSizeBytes, WidthPx, HeightPx, WeightGrams,
-                           DimX, DimY, DimZ, IsDeleted
+                           DimX, DimY, DimZ, IsDeleted, DeletedAt
                     FROM CapturedImages 
-                    WHERE IsDeleted = 0
+                    WHERE IsDeleted = 0 AND DeletedAt IS NULL
                     ORDER BY CaptureTimeUtc DESC";
 
                 using (var command = new SQLiteCommand(selectSql, connection))
@@ -484,7 +487,8 @@ namespace EasySnapApp.Data
                                 DimX = reader.IsDBNull(11) ? null : (double?)reader.GetDouble(11),
                                 DimY = reader.IsDBNull(12) ? null : (double?)reader.GetDouble(12),
                                 DimZ = reader.IsDBNull(13) ? null : (double?)reader.GetDouble(13),
-                                IsDeleted = reader.GetInt32(14) == 1
+                                IsDeleted = reader.GetInt32(14) == 1,
+                                DeletedAt = reader.IsDBNull(15) ? null : (DateTime?)DateTime.Parse(reader.GetString(15))
                             });
                         }
                     }
@@ -568,6 +572,106 @@ namespace EasySnapApp.Data
         }
 
         /// <summary>
+        /// Phase 3.9: Soft delete multiple captures - move to recycle folder with tombstone
+        /// </summary>
+        public void SoftDeleteCaptures(IEnumerable<string> imageIds, Action<string> logger = null)
+        {
+            var exportsRoot = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Exports");
+            var recycleRoot = Path.Combine(exportsRoot, ".recycle");
+            
+            using (var connection = _database.GetConnection())
+            {
+                connection.Open();
+                using (var transaction = connection.BeginTransaction())
+                {
+                    try
+                    {
+                        var deletedCount = 0;
+                        foreach (var imageId in imageIds)
+                        {
+                            // Get file paths and metadata before soft delete
+                            var selectSql = "SELECT FullPath, ThumbPath, PartNumber, Sequence FROM CapturedImages WHERE ImageId = @imageId";
+                            string fullPath = null, thumbPath = null, partNumber = null;
+                            int sequence = 0;
+
+                            using (var selectCmd = new SQLiteCommand(selectSql, connection, transaction))
+                            {
+                                selectCmd.Parameters.AddWithValue("@imageId", imageId);
+                                using (var reader = selectCmd.ExecuteReader())
+                                {
+                                    if (reader.Read())
+                                    {
+                                        fullPath = reader.GetString(0);
+                                        thumbPath = reader.IsDBNull(1) ? null : reader.GetString(1);
+                                        partNumber = reader.GetString(2);
+                                        sequence = reader.GetInt32(3);
+                                    }
+                                }
+                            }
+
+                            if (string.IsNullOrEmpty(fullPath))
+                            {
+                                logger?.Invoke($"Image {imageId} not found in database - skipping");
+                                continue;
+                            }
+
+                            // Create recycle folder structure: .recycle\{ImageId}\
+                            var imageRecycleDir = Path.Combine(recycleRoot, imageId);
+                            Directory.CreateDirectory(imageRecycleDir);
+
+                            // Move files to recycle folder (handle missing files gracefully)
+                            try
+                            {
+                                if (File.Exists(fullPath))
+                                {
+                                    var recycledFullPath = Path.Combine(imageRecycleDir, Path.GetFileName(fullPath));
+                                    File.Move(fullPath, recycledFullPath);
+                                    logger?.Invoke($"Moved to recycle: {partNumber}.{sequence:000} -> {recycledFullPath}");
+                                }
+                                else
+                                {
+                                    logger?.Invoke($"Warning: File not found: {fullPath}");
+                                }
+
+                                if (!string.IsNullOrEmpty(thumbPath) && File.Exists(thumbPath))
+                                {
+                                    var recycledThumbPath = Path.Combine(imageRecycleDir, Path.GetFileName(thumbPath));
+                                    File.Move(thumbPath, recycledThumbPath);
+                                    logger?.Invoke($"Moved thumbnail to recycle: {Path.GetFileName(thumbPath)}");
+                                }
+                            }
+                            catch (Exception fileEx)
+                            {
+                                logger?.Invoke($"File move error for {imageId}: {fileEx.Message}");
+                                // Continue with database tombstone even if file move fails
+                            }
+
+                            // Set tombstone in database (IsDeleted=1 + DeletedAt timestamp)
+                            var tombstoneSql = "UPDATE CapturedImages SET IsDeleted = 1, DeletedAt = @deletedAt WHERE ImageId = @imageId";
+                            using (var tombstoneCmd = new SQLiteCommand(tombstoneSql, connection, transaction))
+                            {
+                                tombstoneCmd.Parameters.AddWithValue("@deletedAt", DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"));
+                                tombstoneCmd.Parameters.AddWithValue("@imageId", imageId);
+                                tombstoneCmd.ExecuteNonQuery();
+                            }
+
+                            deletedCount++;
+                        }
+
+                        transaction.Commit();
+                        logger?.Invoke($"Soft deleted {deletedCount} captures (moved to .recycle folder)");
+                    }
+                    catch (Exception ex)
+                    {
+                        transaction.Rollback();
+                        logger?.Invoke($"Soft delete operation failed: {ex.Message}");
+                        throw;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Phase 3.9: Update image sequence and filename (for resequencing)
         /// </summary>
         public void UpdateImageSequence(string imageId, int newSequence, string newFullPath, string newThumbPath = null)
@@ -604,7 +708,7 @@ namespace EasySnapApp.Data
                 var selectSql = @"
                     SELECT ImageId, SessionId, PartNumber, Sequence, FullPath, ThumbPath,
                            CaptureTimeUtc, FileSizeBytes, WidthPx, HeightPx, WeightGrams,
-                           DimX, DimY, DimZ, IsDeleted
+                           DimX, DimY, DimZ, IsDeleted, DeletedAt
                     FROM CapturedImages 
                     WHERE ImageId = @imageId";
 
@@ -631,7 +735,8 @@ namespace EasySnapApp.Data
                                 DimX = reader.IsDBNull(11) ? null : (double?)reader.GetDouble(11),
                                 DimY = reader.IsDBNull(12) ? null : (double?)reader.GetDouble(12),
                                 DimZ = reader.IsDBNull(13) ? null : (double?)reader.GetDouble(13),
-                                IsDeleted = reader.GetInt32(14) == 1
+                                IsDeleted = reader.GetInt32(14) == 1,
+                                DeletedAt = reader.IsDBNull(15) ? null : (DateTime?)DateTime.Parse(reader.GetString(15))
                             };
                         }
                     }
@@ -639,6 +744,23 @@ namespace EasySnapApp.Data
             }
 
             return null;
+        }
+        /// <summary>
+        /// Phase 3.9: Restore a soft-deleted capture (clear tombstone)
+        /// </summary>
+        public void RestoreCapturedImage(string imageId)
+        {
+            using (var connection = _database.GetConnection())
+            {
+                connection.Open();
+
+                var sql = "UPDATE CapturedImages SET IsDeleted = 0, DeletedAt = NULL WHERE ImageId = @imageId";
+                using (var command = new SQLiteCommand(sql, connection))
+                {
+                    command.Parameters.AddWithValue("@imageId", imageId);
+                    command.ExecuteNonQuery();
+                }
+            }
         }
 
         /// <summary>

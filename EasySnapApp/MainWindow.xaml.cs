@@ -59,6 +59,35 @@ namespace EasySnapApp
         // Session log entries
         private readonly List<string> _sessionLogEntries = new List<string>();
 
+        // Undo functionality
+        private readonly Stack<UndoAction> _undoStack = new Stack<UndoAction>();
+
+        // ADD THIS BLOCK HERE:
+        public enum UndoActionType
+        {
+            Delete
+        }
+
+        public class UndoAction
+        {
+            public string ActionId { get; set; }
+            public DateTime Timestamp { get; set; }
+            public UndoActionType ActionType { get; set; }
+            public string Description { get; set; }
+            public string RecycleFolderPath { get; set; }
+            public List<DeletedImageInfo> DeletedImages { get; set; } = new List<DeletedImageInfo>();
+        }
+
+        public class DeletedImageInfo
+        {
+            public string OriginalFullPath { get; set; }
+            public string OriginalThumbPath { get; set; }
+            public string RecycledFullPath { get; set; }
+            public string RecycledThumbPath { get; set; }
+            public CapturedImage OriginalDbRecord { get; set; }
+            public int OriginalIndex { get; set; }
+        }
+
         public MainWindow()
         {
             _isInitializingExportSettings = true;
@@ -300,16 +329,32 @@ namespace EasySnapApp
                 LogSessionMessage($"Loading {allImages.Count} captures from database (all parts)");
                 
                 _imageRecords.Clear();
-                
+
                 foreach (var dbImage in allImages)
                 {
                     try
                     {
                         var viewModel = ImageRecordViewModel.FromCapturedImage(dbImage);
-                        
+
+                        // POPULATE _partData WITH DIMENSIONS FROM DATABASE
+                        if (!_partData.ContainsKey(dbImage.PartNumber))
+                        {
+                            _partData[dbImage.PartNumber] = new PartData();
+                        }
+
+                        if (dbImage.WeightGrams.HasValue || dbImage.DimX.HasValue ||
+                            dbImage.DimY.HasValue || dbImage.DimZ.HasValue)
+                        {
+                            var partData = _partData[dbImage.PartNumber];
+                            partData.WeightLb = dbImage.WeightGrams / 453.592; // Convert grams to lb
+                            partData.LengthIn = dbImage.DimX / 25.4; // Convert mm to inches
+                            partData.WidthIn = dbImage.DimY / 25.4; // Convert mm to inches
+                            partData.HeightIn = dbImage.DimZ / 25.4; // Convert mm to inches
+                        }
+
                         // Load thumbnail image (non-blocking)
                         LoadThumbnailForViewModel(viewModel);
-                        
+
                         _imageRecords.Add(viewModel);
                     }
                     catch (Exception ex)
@@ -317,7 +362,7 @@ namespace EasySnapApp
                         LogSessionMessage($"Failed to load image {Path.GetFileName(dbImage.FullPath)}: {ex.Message}");
                     }
                 }
-                
+
                 // Restore last part number to text box for continued work
                 var lastPartNumber = Properties.Settings.Default.LastPartNumber;
                 if (!string.IsNullOrEmpty(lastPartNumber))
@@ -1094,12 +1139,16 @@ namespace EasySnapApp
                 // Fallback to old file-based loading
                 LoadSessionImages(part);
             }
-            
+
             PreviewImage.Source = null;
             PreviewMetaTextBlock.Text = "";
+
+            // Clear weight field for new part (but keep scale tared)
+            WeightTextBox.Text = "";
+
             StatusTextBlock.Text = $"Started session for part {part}.";
             LogSessionMessage($"Session started for {part}");
-            
+
             // CRITICAL: Set part number for automatic capture
             var exports = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Exports");
             LogSessionMessage($"DEBUG: Setting camera session context...");
@@ -1367,29 +1416,78 @@ namespace EasySnapApp
             LogSessionMessage($"Applied part measurements to {part} ({updatedRows} images): {string.Join(" ", logDetails)}");
         }
 
-        private void CaptureWeightButton_Click(object sender, RoutedEventArgs e)
+        /// <summary>
+        /// + Button: Capture weight from scale or use manual entry
+        /// </summary>
+        private void WeightPlusButton_Click(object sender, RoutedEventArgs e)
         {
             var part = PartNumberTextBox.Text?.Trim();
             if (string.IsNullOrWhiteSpace(part))
             {
-                MessageBox.Show("Enter a Part Number first.",
-                                "Warning",
-                                MessageBoxButton.OK,
-                                MessageBoxImage.Warning);
+                MessageBox.Show("Enter a Part Number first.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            // Try scale first if configured, fallback to manual
+            CaptureWeightForPart(part, showMessages: true);
+        }
+
+        /// <summary>
+        /// - Button: Tare scale and clear weight field
+        /// </summary>
+        private void WeightMinusButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // Tare the scale if configured
+                if (!string.IsNullOrEmpty(_scaleSvc.PortName))
+                {
+                    LogSessionMessage($"Taring scale on {_scaleSvc.PortName}...");
+                    _scaleSvc.TareScale();
+                    LogSessionMessage($"Scale tared successfully: {_scaleSvc.LastRawLine}");
+                }
+
+                // Clear weight field
+                WeightTextBox.Text = "";
+
+                // Clear weight from current part data if exists
+                var part = PartNumberTextBox.Text?.Trim();
+                if (!string.IsNullOrWhiteSpace(part) && _partData.TryGetValue(part, out var partData))
+                {
+                    partData.WeightLb = null;
+                    LogSessionMessage($"Cleared weight for part {part}");
+                }
+
+                StatusTextBlock.Text = "Scale tared and weight cleared.";
+            }
+            catch (Exception ex)
+            {
+                LogSessionMessage($"Tare failed: {ex.Message}");
+                StatusTextBlock.Text = $"Tare failed: {ex.Message}";
+
+                // Still clear the text field even if scale tare failed
+                WeightTextBox.Text = "";
+            }
+        }
+
+        /// <summary>
+        /// Core weight capture logic - used by + button and auto-capture
+        /// </summary>
+        private double? CaptureWeightForPart(string partNumber, bool showMessages = false)
+        {
+            if (string.IsNullOrWhiteSpace(partNumber))
+                return null;
+
             double weightLb;
             bool scaleSuccess = false;
 
+            // Try scale first if configured, fallback to manual
             if (!string.IsNullOrEmpty(_scaleSvc.PortName))
             {
                 try
                 {
-                    LogSessionMessage($"Reading scale on {_scaleSvc.PortName}...");
+                    if (showMessages) LogSessionMessage($"Reading scale on {_scaleSvc.PortName}...");
                     weightLb = _scaleSvc.CaptureWeightLbOnce();
-                    LogSessionMessage($"Scale read successful: {weightLb:F2} lb (Raw: '{_scaleSvc.LastRawLine}')");
+                    if (showMessages) LogSessionMessage($"Scale read successful: {weightLb:F2} lb (Raw: '{_scaleSvc.LastRawLine}')");
                     scaleSuccess = true;
 
                     // Update the weight textbox with scale reading
@@ -1397,10 +1495,13 @@ namespace EasySnapApp
                 }
                 catch (Exception ex)
                 {
-                    LogSessionMessage($"Scale read failed: {ex.Message}");
-                    if (!string.IsNullOrEmpty(_scaleSvc.LastRawLine))
+                    if (showMessages)
                     {
-                        LogSessionMessage($"Raw scale output: '{_scaleSvc.LastRawLine}'");
+                        LogSessionMessage($"Scale read failed: {ex.Message}");
+                        if (!string.IsNullOrEmpty(_scaleSvc.LastRawLine))
+                        {
+                            LogSessionMessage($"Raw scale output: '{_scaleSvc.LastRawLine}'");
+                        }
                     }
 
                     // Fall back to manual entry
@@ -1408,13 +1509,16 @@ namespace EasySnapApp
                     if (manualWeight.HasValue)
                     {
                         weightLb = manualWeight.Value;
-                        LogSessionMessage($"Using manual weight: {weightLb:F2} lb");
+                        if (showMessages) LogSessionMessage($"Using manual weight: {weightLb:F2} lb");
                     }
                     else
                     {
-                        StatusTextBlock.Text = "Scale failed and no manual weight entered.";
-                        LogSessionMessage("Scale failed and no manual weight in textbox");
-                        return;
+                        if (showMessages)
+                        {
+                            StatusTextBlock.Text = "Scale failed and no manual weight entered.";
+                            LogSessionMessage("Scale failed and no manual weight in textbox");
+                        }
+                        return null;
                     }
                 }
             }
@@ -1425,34 +1529,42 @@ namespace EasySnapApp
                 if (manualWeight.HasValue)
                 {
                     weightLb = manualWeight.Value;
-                    LogSessionMessage($"Using manual weight: {weightLb:F2} lb (no scale configured)");
+                    if (showMessages) LogSessionMessage($"Using manual weight: {weightLb:F2} lb (no scale configured)");
                 }
                 else
                 {
-                    StatusTextBlock.Text = "Enter a weight value first.";
-                    LogSessionMessage("Capture Weight: No weight entered in textbox");
-                    return;
+                    if (showMessages)
+                    {
+                        StatusTextBlock.Text = "Enter a weight value first.";
+                        LogSessionMessage("No weight available - neither scale nor manual entry");
+                    }
+                    return null;
                 }
             }
 
             // Apply weight to part-level data
-            if (!_partData.TryGetValue(part, out var pd))
+            if (!_partData.TryGetValue(partNumber, out var pd))
             {
                 pd = new PartData();
-                _partData[part] = pd;
+                _partData[partNumber] = pd;
             }
 
             pd.WeightLb = weightLb;
 
-            // Update all existing rows for this part
-            foreach (var row in _results.Where(r => string.Equals(r.PartNumber, part, StringComparison.OrdinalIgnoreCase)))
+            // Update existing UI records for this part
+            foreach (var record in _imageRecords.Where(r => string.Equals(r.PartNumber, partNumber, StringComparison.OrdinalIgnoreCase)))
             {
-                row.WeightLb = weightLb;
+                record.WeightLb = weightLb;
             }
 
-            var source = scaleSuccess ? "scale" : "manual";
-            StatusTextBlock.Text = $"Applied weight {weightLb:F2} lb to part {part} ({source}).";
-            LogSessionMessage($"Weight applied to {part}: {weightLb:F2} lb ({source})");
+            if (showMessages)
+            {
+                var source = scaleSuccess ? "scale" : "manual";
+                StatusTextBlock.Text = $"Applied weight {weightLb:F2} lb to part {partNumber} ({source}).";
+                LogSessionMessage($"Weight applied to {partNumber}: {weightLb:F2} lb ({source})");
+            }
+
+            return weightLb;
         }
 
         private void ExportCsvButton_Click(object sender, RoutedEventArgs e)
@@ -1516,6 +1628,11 @@ namespace EasySnapApp
             return null;
         }
 
+        private void UndoMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            UndoLastDelete();
+        }
+        
         private void Exit_Click(object sender, RoutedEventArgs e)
         {
             // Dispose camera service properly
@@ -1749,107 +1866,6 @@ namespace EasySnapApp
         }
         
         /// <summary>
-        /// Phase 3.9: Safe delete with confirmation
-        /// </summary>
-        private void DeleteSelectedCaptures()
-        {
-            var selectedItems = _imageRecords.Where(x => x.IsSelected).ToList();
-            if (selectedItems.Count == 0)
-            {
-                LogSessionMessage("No captures selected for deletion");
-                return;
-            }
-            
-            // Confirmation dialog for multiple items
-            if (selectedItems.Count > 1)
-            {
-                var result = MessageBox.Show(
-                    $"You are deleting {selectedItems.Count} images permanently. This cannot be undone. Continue?",
-                    "Confirm Deletion",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Warning);
-                    
-                if (result != MessageBoxResult.Yes)
-                    return;
-            }
-            
-            try
-            {
-                var imageIds = selectedItems.Where(x => !string.IsNullOrEmpty(x.ImageId))
-                                          .Select(x => x.ImageId)
-                                          .ToList();
-                
-                if (imageIds.Count > 0)
-                {
-                    // Delete from database and files
-                    _repository.DeleteCaptures(imageIds, LogSessionMessage);
-                }
-                
-                // Remove from UI collection
-                foreach (var item in selectedItems)
-                {
-                    _imageRecords.Remove(item);
-                }
-                
-                // Select next item if available
-                if (_imageRecords.Count > 0)
-                {
-                    var nextItem = _imageRecords.FirstOrDefault();
-                    if (nextItem != null)
-                    {
-                        SyncSelection(nextItem);
-                    }
-                }
-                
-                LogSessionMessage($"Deleted {selectedItems.Count} captures successfully");
-                StatusTextBlock.Text = $"Deleted {selectedItems.Count} captures";
-            }
-            catch (Exception ex)
-            {
-                LogSessionMessage($"Delete operation failed: {ex.Message}");
-                MessageBox.Show($"Delete failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-        
-        /// <summary>
-        /// Phase 3.9: Handle key events for deletion
-        /// </summary>
-        protected override void OnPreviewKeyDown(KeyEventArgs e)
-        {
-            if (e.Key == Key.Delete || e.Key == Key.Back)
-            {
-                // Check if we're focused on the data grid or thumbnail area
-                var focusedElement = Keyboard.FocusedElement;
-                if (focusedElement == SessionDataGrid || 
-                    IsDescendantOf(focusedElement as DependencyObject, SessionDataGrid) ||
-                    IsDescendantOf(focusedElement as DependencyObject, ThumbnailBar))
-                {
-                    DeleteSelectedCaptures();
-                    e.Handled = true;
-                    return;
-                }
-            }
-            
-            base.OnPreviewKeyDown(e);
-        }
-        
-        /// <summary>
-        /// Helper to check if element is descendant of parent
-        /// </summary>
-        private bool IsDescendantOf(DependencyObject child, DependencyObject parent)
-        {
-            if (child == null || parent == null) return false;
-            
-            var current = child;
-            while (current != null)
-            {
-                if (current == parent) return true;
-                current = VisualTreeHelper.GetParent(current);
-            }
-            return false;
-        }
-        
-        /// <summary>
         /// Phase 3.9: Optional collapse parts setting (infrastructure only)
         /// </summary>
         private bool AutoCollapseParts
@@ -1888,7 +1904,7 @@ namespace EasySnapApp
                         {
                             var sequence = GetSequenceFromFilename(fullImagePath);
                             var fileInfo = new FileInfo(fullImagePath);
-                            
+
                             var capturedImage = new CapturedImage
                             {
                                 ImageId = Guid.NewGuid().ToString(),
@@ -1901,13 +1917,32 @@ namespace EasySnapApp
                                 FileSizeBytes = fileInfo.Length,
                                 IsDeleted = false
                             };
-                            
+
+                            // COPY DIMENSIONS FROM _partData TO DATABASE RECORD
+                            if (_partData.TryGetValue(partNumber, out var dbPartData))
+                            {
+                                capturedImage.WeightGrams = dbPartData.WeightLb * 453.592; // Convert lb to grams
+                                capturedImage.DimX = dbPartData.LengthIn * 25.4; // Convert inches to mm
+                                capturedImage.DimY = dbPartData.WidthIn * 25.4; // Convert inches to mm  
+                                capturedImage.DimZ = dbPartData.HeightIn * 25.4; // Convert inches to mm
+                            }
+
                             _repository.InsertCapturedImage(capturedImage);
                             
                             // Create view model and add to UI
                             var viewModel = ImageRecordViewModel.FromCapturedImage(capturedImage);
                             LoadThumbnailForViewModel(viewModel);
-                            
+
+                            // AUTO-CAPTURE WEIGHT: If no weight exists for this part, try to capture it now
+                            if (!_partData.ContainsKey(partNumber) || !_partData[partNumber].WeightLb.HasValue)
+                            {
+                                var autoWeight = CaptureWeightForPart(partNumber, showMessages: false);
+                                if (autoWeight.HasValue)
+                                {
+                                    LogSessionMessage($"AUTO-CAPTURE: Weight {autoWeight:F2} lb captured with photo");
+                                }
+                            }
+
                             // Apply part-level measurements if available
                             if (_partData.TryGetValue(partNumber, out var partData))
                             {
@@ -1916,7 +1951,7 @@ namespace EasySnapApp
                                 viewModel.HeightIn = partData.HeightIn;
                                 viewModel.WeightLb = partData.WeightLb;
                             }
-                            
+
                             // Insert at the top (newest first)
                             _imageRecords.Insert(0, viewModel);
                             
@@ -1936,6 +1971,316 @@ namespace EasySnapApp
                     LogSessionMessage($"Enhanced photo saved handler error: {ex.Message}");
                 }
             });
+        }
+        
+        /// <summary>
+        /// Phase 3.9: Safe delete with confirmation - SOFT DELETE implementation
+        /// </summary>
+        private void DeleteSelectedCaptures()
+        {
+            // Step 1B: Delete audit logging
+            var isSelectedCount = _imageRecords.Count(x => x.IsSelected);
+            var dataGridSelectedCount = SessionDataGrid?.SelectedItems?.Count ?? 0;
+            var focusedElementType = Keyboard.FocusedElement?.GetType()?.Name ?? "NULL";
+            var currentPart = string.IsNullOrEmpty(_currentPartNumber) ? "NULL" : _currentPartNumber;
+            
+            LogSessionMessage($"DELETE AUDIT: IsSelected={isSelectedCount}, DataGrid.SelectedItems={dataGridSelectedCount}, FocusedElement={focusedElementType}, CurrentPart={currentPart}");
+            
+            // Step 1B: Selection reconciliation - treat DataGrid as canonical if it has items
+            if (dataGridSelectedCount > 0)
+            {
+                LogSessionMessage($"DELETE AUDIT: DataGrid canonical reconciliation IsSelected={isSelectedCount} DataGrid={dataGridSelectedCount}");
+                
+                // Clear all IsSelected flags
+                foreach (var item in _imageRecords)
+                {
+                    item.IsSelected = false;
+                }
+                
+                // Set IsSelected=true for each DataGrid selected item
+                foreach (var selectedItem in SessionDataGrid.SelectedItems.OfType<ImageRecordViewModel>())
+                {
+                    selectedItem.IsSelected = true;
+                }
+                
+                var postSyncCount = _imageRecords.Count(x => x.IsSelected);
+                LogSessionMessage($"DELETE AUDIT POST-SYNC: IsSelected={postSyncCount}");
+            }
+            
+            var selectedItems = _imageRecords.Where(x => x.IsSelected).ToList();
+            
+            // Log final delete target counts before confirmation
+            var finalIsSelectedCount = _imageRecords.Count(x => x.IsSelected);
+            var finalDataGridCount = SessionDataGrid?.SelectedItems?.Count ?? 0;
+            LogSessionMessage($"DELETE FINAL COUNTS: IsSelected={finalIsSelectedCount}, DataGrid={finalDataGridCount}, DeleteTargets={selectedItems.Count}");
+            
+            if (selectedItems.Count == 0)
+            {
+                LogSessionMessage("No captures selected for deletion");
+                return;
+            }
+            
+            // Confirmation dialog for multiple items
+            if (selectedItems.Count > 1)
+            {
+                var result = MessageBox.Show(
+                    $"Delete {selectedItems.Count} images? (Files will be moved to recycle folder)",
+                    "Confirm Deletion",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+                    
+                if (result != MessageBoxResult.Yes)
+                    return;
+            }
+            
+            try
+            {
+                var imageIds = selectedItems.Where(x => !string.IsNullOrEmpty(x.ImageId))
+                                          .Select(x => x.ImageId)
+                                          .ToList();
+                
+                if (imageIds.Count > 0)
+                {
+                    // Step 1B: Log delete targets before repository call
+                    var targetList = selectedItems.Take(10).Select(item => 
+                        $"{item.PartNumber}.{item.Sequence:000}({item.ImageId?.Substring(0, Math.Min(8, item.ImageId?.Length ?? 0)) ?? "NO-ID"})"
+                    ).ToList();
+                    var moreText = selectedItems.Count > 10 ? $" +{selectedItems.Count - 10} more" : "";
+                    LogSessionMessage($"DELETE TARGETS: {imageIds.Count} IDs, items=[{string.Join(", ", targetList)}{moreText}]");
+                    
+                    // Build undo action before soft delete
+                    var undoAction = new UndoAction
+                    {
+                        ActionId = Guid.NewGuid().ToString(),
+                        Timestamp = DateTime.UtcNow,
+                        ActionType = UndoActionType.Delete,
+                        Description = $"Deleted {selectedItems.Count} images",
+                        RecycleFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Exports", ".recycle")
+                    };
+                    
+                    // Capture original state for each image
+                    foreach (var item in selectedItems.Where(x => !string.IsNullOrEmpty(x.ImageId)))
+                    {
+                        try
+                        {
+                            // Get full database record
+                            var dbRecord = _repository.GetImageById(item.ImageId);
+                            if (dbRecord != null)
+                            {
+                                var deletedImageInfo = new DeletedImageInfo
+                                {
+                                    OriginalFullPath = dbRecord.FullPath,
+                                    OriginalThumbPath = dbRecord.ThumbPath,
+                                    RecycledFullPath = Path.Combine(undoAction.RecycleFolderPath, dbRecord.ImageId, Path.GetFileName(dbRecord.FullPath)),
+                                    RecycledThumbPath = string.IsNullOrEmpty(dbRecord.ThumbPath) ? null : Path.Combine(undoAction.RecycleFolderPath, dbRecord.ImageId, Path.GetFileName(dbRecord.ThumbPath)),
+                                    OriginalDbRecord = dbRecord,
+                                    OriginalIndex = _imageRecords.IndexOf(item)
+                                };
+                                
+                                undoAction.DeletedImages.Add(deletedImageInfo);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            LogSessionMessage($"Failed to capture undo info for {item.PartNumber}.{item.Sequence}: {ex.Message}");
+                        }
+                    }
+                    
+                    // Soft delete from database and move files to recycle
+                    _repository.SoftDeleteCaptures(imageIds, LogSessionMessage);
+                    
+                    // Push undo action after successful delete
+                    _undoStack.Push(undoAction);
+                    
+                    // Limit stack to 20 actions
+                    while (_undoStack.Count > 20)
+                    {
+                        _undoStack.Pop();
+                    }
+                    
+                    LogSessionMessage($"DELETE UNDO: Pushed action {undoAction.ActionId} with {undoAction.DeletedImages.Count} items to stack (stack size: {_undoStack.Count})");
+                }
+                
+                // Remove from UI collection
+                foreach (var item in selectedItems)
+                {
+                    _imageRecords.Remove(item);
+                }
+                
+                // Select next item if available
+                if (_imageRecords.Count > 0)
+                {
+                    var nextItem = _imageRecords.FirstOrDefault();
+                    if (nextItem != null)
+                    {
+                        SyncSelection(nextItem);
+                    }
+                }
+                
+                LogSessionMessage($"Soft deleted {selectedItems.Count} captures successfully");
+                StatusTextBlock.Text = $"Soft deleted {selectedItems.Count} captures";
+            }
+            catch (Exception ex)
+            {
+                LogSessionMessage($"Delete operation failed: {ex.Message}");
+                MessageBox.Show($"Delete failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        
+        /// <summary>
+        /// Undo the last soft delete operation
+        /// </summary>
+        private void UndoLastDelete()
+        {
+            if (_undoStack.Count == 0)
+            {
+                LogSessionMessage("UNDO: No actions to undo");
+                return;
+            }
+            
+            if (_database == null || _repository == null)
+            {
+                LogSessionMessage("UNDO: Database not available");
+                return;
+            }
+            
+            try
+            {
+                var undoAction = _undoStack.Pop();
+                var restoredCount = 0;
+                
+                foreach (var deletedImage in undoAction.DeletedImages)
+                {
+                    try
+                    {
+                        // Restore DB record
+                        _repository.RestoreCapturedImage(deletedImage.OriginalDbRecord.ImageId);
+                        
+                        // Move files back from recycle to original paths
+                        if (File.Exists(deletedImage.RecycledFullPath) && !string.IsNullOrEmpty(deletedImage.OriginalFullPath))
+                        {
+                            var originalDir = Path.GetDirectoryName(deletedImage.OriginalFullPath);
+                            if (!Directory.Exists(originalDir))
+                                Directory.CreateDirectory(originalDir);
+                            File.Move(deletedImage.RecycledFullPath, deletedImage.OriginalFullPath);
+                        }
+                        
+                        if (File.Exists(deletedImage.RecycledThumbPath) && !string.IsNullOrEmpty(deletedImage.OriginalThumbPath))
+                        {
+                            var originalThumbDir = Path.GetDirectoryName(deletedImage.OriginalThumbPath);
+                            if (!Directory.Exists(originalThumbDir))
+                                Directory.CreateDirectory(originalThumbDir);
+                            File.Move(deletedImage.RecycledThumbPath, deletedImage.OriginalThumbPath);
+                        }
+                        
+                        // Recreate view model and reinsert into UI collection
+                        var restoredViewModel = ImageRecordViewModel.FromCapturedImage(deletedImage.OriginalDbRecord);
+                        LoadThumbnailForViewModel(restoredViewModel);
+                        
+                        // Insert at original index if possible, otherwise at the beginning
+                        var insertIndex = Math.Min(deletedImage.OriginalIndex, _imageRecords.Count);
+                        _imageRecords.Insert(insertIndex, restoredViewModel);
+                        
+                        restoredCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        LogSessionMessage($"UNDO: Failed to restore {deletedImage.OriginalDbRecord?.PartNumber}.{deletedImage.OriginalDbRecord?.Sequence}: {ex.Message}");
+                    }
+                }
+                
+                if (restoredCount > 0)
+                {
+                    LogSessionMessage($"UNDO: Restored {restoredCount} images");
+                    StatusTextBlock.Text = $"Restored {restoredCount} images";
+                }
+                else
+                {
+                    LogSessionMessage("UNDO: Failed to restore any images");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogSessionMessage($"UNDO: Failed - {ex.Message}");
+            }
+        }
+        /// <summary>
+        /// Check if the current focus is on a text input control
+        /// </summary>
+        private bool IsTextInputContext()
+        {
+            var focused = Keyboard.FocusedElement;
+            return focused is TextBox || focused is ComboBox ||
+                   (focused is Control control && control.IsTabStop &&
+                    (control.GetType().Name.Contains("Text") || control.GetType().Name.Contains("Edit")));
+        }
+
+        /// <summary>
+        /// Phase 3.9: Handle key events for deletion and undo
+        /// </summary>
+        /// <summary>
+        /// Phase 3.9: Handle key events for deletion and undo
+        /// </summary>
+        protected override void OnPreviewKeyDown(KeyEventArgs e)
+        {
+            // Handle Ctrl+Z for undo
+            if (e.Key == Key.Z && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+            {
+                if (!IsTextInputContext())
+                {
+                    LogSessionMessage("KEY: Ctrl+Z pressed → calling UndoLastDelete");
+                    UndoLastDelete();
+                    e.Handled = true;
+                    return;
+                }
+                else
+                {
+                    var focusedElementType = Keyboard.FocusedElement?.GetType()?.Name ?? "UNKNOWN";
+                    LogSessionMessage($"KEY BLOCKED: text input focus ({focusedElementType}) - Ctrl+Z ignored");
+                }
+            }
+            
+            // Handle Delete and Backspace for deletion
+            if (e.Key == Key.Delete || e.Key == Key.Back)
+            {
+                // Block delete while typing in text inputs
+                if (IsTextInputContext())
+                {
+                    var focusedElementType = Keyboard.FocusedElement?.GetType()?.Name ?? "UNKNOWN";
+                    LogSessionMessage($"KEY BLOCKED: text input focus ({focusedElementType}) - Delete ignored");
+                    return;
+                }
+                
+                // Check if there are selected items in either thumbnails or DataGrid
+                var hasSelectedThumbnails = _imageRecords.Any(x => x.IsSelected);
+                var hasSelectedDataGridItems = SessionDataGrid.SelectedItems.Count > 0;
+                
+                if (hasSelectedThumbnails || hasSelectedDataGridItems)
+                {
+                    LogSessionMessage($"KEY: Delete pressed → calling DeleteSelectedCaptures (thumbnails={hasSelectedThumbnails}, datagrid={hasSelectedDataGridItems})");
+                    DeleteSelectedCaptures();
+                    e.Handled = true;
+                    return;
+                }
+            }
+            
+            base.OnPreviewKeyDown(e);
+        }
+        
+        /// <summary>
+        /// Helper to check if element is descendant of parent
+        /// </summary>
+        private bool IsDescendantOf(DependencyObject child, DependencyObject parent)
+        {
+            if (child == null || parent == null) return false;
+            
+            var current = child;
+            while (current != null)
+            {
+                if (current == parent) return true;
+                current = VisualTreeHelper.GetParent(current);
+            }
+            return false;
         }
         
         #endregion

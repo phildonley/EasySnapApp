@@ -426,3 +426,17 @@ obj/
 *.cache
 *.log
 >>>>>>> 416ddc8 (Initial commit of EasySnapApp)
+# --- build / packaging artifacts ---
+DIST/
+EasySnap_DIST.zip
+build_portable.ps1
+
+# --- Visual Studio / .NET ---
+bin/
+obj/
+.vs/
+*.user
+*.suo
+
+# --- logs ---
+session_log.txt

@@ -85,6 +85,53 @@ namespace EasySnapApp.Data
                 {
                     command.ExecuteNonQuery();
                 }
+
+                // SOFT DELETE: Add DeletedAt column migration (safe to run repeatedly)
+                AddDeletedAtColumnIfNeeded(connection);
+            }
+        }
+
+        /// <summary>
+        /// Add DeletedAt column to CapturedImages if it doesn't exist (defensive migration)
+        /// </summary>
+        private void AddDeletedAtColumnIfNeeded(SQLiteConnection connection)
+        {
+            try
+            {
+                // Check if DeletedAt column exists
+                var checkColumnSql = "PRAGMA table_info(CapturedImages)";
+                bool columnExists = false;
+
+                using (var command = new SQLiteCommand(checkColumnSql, connection))
+                {
+                    using (var reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            var columnName = reader.GetString(1); // Column name is at index 1
+                            if (columnName.Equals("DeletedAt", StringComparison.OrdinalIgnoreCase))
+                            {
+                                columnExists = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (!columnExists)
+                {
+                    var addColumnSql = "ALTER TABLE CapturedImages ADD COLUMN DeletedAt TEXT NULL";
+                    using (var command = new SQLiteCommand(addColumnSql, connection))
+                    {
+                        command.ExecuteNonQuery();
+                    }
+                    System.Diagnostics.Debug.WriteLine("SoftDelete: Added DeletedAt column to CapturedImages table");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SoftDelete: Migration error: {ex.Message}");
+                // Don't throw - app should continue working even if migration fails
             }
         }
 

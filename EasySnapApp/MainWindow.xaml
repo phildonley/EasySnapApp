@@ -37,7 +37,9 @@
             <MenuItem Header="_File">
                 <MenuItem Header="E_xit" Click="Exit_Click"/>
             </MenuItem>
-            <MenuItem Header="_Edit"/>
+            <MenuItem Header="_Edit">
+                <MenuItem Header="_Undo" InputGestureText="Ctrl+Z" Click="UndoMenuItem_Click"/>
+            </MenuItem>
             <MenuItem Header="_Settings">
                 <MenuItem Header="DIMS Export Settings..." Click="OpenSettings_Click"/>
                 <Separator/>
@@ -294,10 +296,14 @@
                         <TextBlock Text="Weight (lb)" FontWeight="Bold"/>
                         <DockPanel LastChildFill="False" Margin="0,6,0,10">
                             <TextBox x:Name="WeightTextBox" Width="120" DockPanel.Dock="Left" Margin="0,0,8,0"/>
-                            <Button x:Name="CaptureWeightButton"
-                                    Content="Capture"
-                                    Click="CaptureWeightButton_Click"
-                                    Width="90"/>
+                            <StackPanel Orientation="Horizontal">
+                                <Button x:Name="WeightPlusButton" Click="WeightPlusButton_Click" 
+                                        Content="+" Width="30" Height="30" Margin="2"
+                                        ToolTip="Capture weight from scale" FontWeight="Bold" />
+                                <Button x:Name="WeightMinusButton" Click="WeightMinusButton_Click" 
+                                        Content="-" Width="30" Height="30" Margin="2"
+                                        ToolTip="Tare scale and clear weight" FontWeight="Bold" />
+                            </StackPanel>
                         </DockPanel>
 
                         <TextBlock Text="Dims (in)" FontWeight="Bold"/>
