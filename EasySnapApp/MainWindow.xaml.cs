@@ -1569,7 +1569,8 @@ namespace EasySnapApp
 
         private void ExportCsvButton_Click(object sender, RoutedEventArgs e)
         {
-            if (_results.Count == 0)
+            // Use _imageRecords (the current data collection), not _results
+            if (_imageRecords.Count == 0)
             {
                 StatusTextBlock.Text = "No data to export.";
                 return;
@@ -1587,11 +1588,12 @@ namespace EasySnapApp
 
             try
             {
-                // ONE ROW PER PART NUMBER with new specification
-                CsvWriter.ExportOneRowPerPart(sfd.FileName, _results, LogSessionMessage);
+                // FIXED: Using _imageRecords instead of _results
+                CsvWriter.ExportOneRowPerPart(sfd.FileName, _imageRecords, LogSessionMessage);
 
                 StatusTextBlock.Text = $"Exported CSV: {Path.GetFileName(sfd.FileName)}";
-                LogSessionMessage($"Exported CSV: {Path.GetFileName(sfd.FileName)} ({_results.GroupBy(r => r.PartNumber, StringComparer.OrdinalIgnoreCase).Count()} parts, {_results.Count} images)");
+                // FIXED: Using _imageRecords for the log message too
+                LogSessionMessage($"Exported CSV: {Path.GetFileName(sfd.FileName)} ({_imageRecords.GroupBy(r => r.PartNumber, StringComparer.OrdinalIgnoreCase).Count()} parts, {_imageRecords.Count} images)");
             }
             catch (Exception ex)
             {

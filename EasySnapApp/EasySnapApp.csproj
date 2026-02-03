@@ -52,6 +52,7 @@
 		</Compile>
 		<Compile Include="Properties\AssemblyInfo.cs" />
 		<Compile Include="Properties\Resources.Designer.cs" />
+		<Compile Include="Utils\AppPaths.cs" />
 		<Compile Include="Views\DeviceSettingsWindow.xaml.cs" />
 		<Compile Include="Views\GeneralSettingsWindow.xaml.cs" />
 		<Compile Include="Views\MeasurementToolsWindow.xaml.cs" />
@@ -209,4 +210,10 @@
 
 
 
+  <ItemGroup>
+    <Content Include="EDSDK.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 </Project>
+

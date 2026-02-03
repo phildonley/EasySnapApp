@@ -1,4 +1,5 @@
 using EasySnapApp.Models;
+using EasySnapApp.Views;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -71,9 +72,9 @@ namespace EasySnapApp.Utils
         /// <summary>
         /// Exports CSV with exact specification requirements and validation logging
         /// </summary>
-        public static void ExportOneRowPerPart(string csvPath, IEnumerable<ScanResult> results, Action<string> logMessage = null)
+        public static void ExportOneRowPerPart(string csvPath, IEnumerable<ImageRecordViewModel> imageRecords, Action<string> logMessage = null)
         {
-            if (results == null) throw new ArgumentNullException(nameof(results));
+            if (imageRecords == null) throw new ArgumentNullException(nameof(imageRecords));
 
             // Load export settings
             var settings = Properties.Settings.Default;
@@ -96,7 +97,7 @@ namespace EasySnapApp.Utils
             if (!string.IsNullOrWhiteSpace(dir))
                 Directory.CreateDirectory(dir);
 
-            var rows = results
+            var rows = imageRecords
                 .Where(r => !string.IsNullOrWhiteSpace(r.PartNumber))
                 .GroupBy(r => r.PartNumber.Trim(), StringComparer.OrdinalIgnoreCase)
                 .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
@@ -127,11 +128,24 @@ namespace EasySnapApp.Utils
 
                 if (representative != null)
                 {
-                    // Convert dimensions from stored inches to export unit
-                    var lengthConverted = ConvertLength(representative.LengthIn, "in", dimUnit);
-                    var widthConverted = ConvertLength(representative.DepthIn, "in", dimUnit); // DepthIn = Width
-                    var heightConverted = ConvertLength(representative.HeightIn, "in", dimUnit);
-                    var weightConverted = ConvertWeight(representative.WeightLb, "lb", wgtUnit);
+                    // DEBUG: Log the raw values to understand what units we're actually getting
+                    logMessage?.Invoke($"DEBUG: Raw ViewModel values for {part} - Length: {representative.LengthIn}, Width: {representative.DepthIn}, Height: {representative.HeightIn}, Weight: {representative.WeightLb}");
+
+                    // ImageRecordViewModel stores data in inches/pounds (from UI)
+                    // But we need to convert according to DIMS export settings
+                    var sourceLengthIn = representative.LengthIn ?? 0.0;
+                    var sourceWidthIn = representative.DepthIn ?? 0.0; // DepthIn = Width in ViewModel
+                    var sourceHeightIn = representative.HeightIn ?? 0.0;
+                    var sourceWeightLb = representative.WeightLb ?? 0.0;
+
+                    // Convert from source units (inches/lb) to export units per DIMS settings
+                    var lengthConverted = ConvertLength(sourceLengthIn, "in", dimUnit);
+                    var widthConverted = ConvertLength(sourceWidthIn, "in", dimUnit);
+                    var heightConverted = ConvertLength(sourceHeightIn, "in", dimUnit);
+                    var weightConverted = ConvertWeight(sourceWeightLb, "lb", wgtUnit);
+
+                    // DEBUG: Log the converted values
+                    logMessage?.Invoke($"DEBUG: Converted values for {part} - Length: {lengthConverted}{dimUnit}, Width: {widthConverted}{dimUnit}, Height: {heightConverted}{dimUnit}, Weight: {weightConverted}{wgtUnit}");
 
                     // Format to 0-4 decimal places, blank if invalid
                     vals["NET_LENGTH"] = FormatNumeric(lengthConverted);

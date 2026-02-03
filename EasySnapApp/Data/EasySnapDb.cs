@@ -15,10 +15,14 @@ namespace EasySnapApp.Data
 
         public EasySnapDb()
         {
-            // Store database in application's data folder
-            var dataFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data");
+            // Store database in a writable per-user data folder (portable across install locations)
+            var dataFolder = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "EasySnapApp",
+                "Data");
+
             Directory.CreateDirectory(dataFolder);
-            
+
             _dbPath = Path.Combine(dataFolder, "EasySnap.db");
             _connectionString = $"Data Source={_dbPath};Version=3;";
         }
