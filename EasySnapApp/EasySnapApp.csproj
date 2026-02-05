@@ -14,6 +14,7 @@
 		<!-- We manually list all XAML and code items -->
 		<EnableDefaultPageItems>false</EnableDefaultPageItems>
 		<EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+		<ApplicationIcon>Icons\app-icon.ico</ApplicationIcon>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -22,15 +23,18 @@
 	  <None Remove="Assets\Splash\EasySnap_Splash3.png" />
 	  <None Remove="Assets\Splash\EasySnap_Splash4.png" />
 	  <None Remove="Assets\Splash\EasySnap_Splash5.png" />
+	  <None Remove="Icons\app-icon.ico" />
 	  <None Remove="SplashWindow.xaml" />
 	  <None Remove="Views\GeneralSettingsWindow.xaml" />
 	  <None Remove="Views\MeasurementToolsWindow.xaml" />
+	  <None Remove="Views\SequenceSetupWindow.xaml" />
 	  <None Remove="Views\Settings\General\GeneralFileSettingsControl.xaml" />
 	  <None Remove="Views\Settings\General\GeneralInterfaceSettingsControl.xaml" />
 	  <None Remove="Views\Settings\Measurement\InfraredCamSettingsControl.xaml" />
 	  <None Remove="Views\Settings\Measurement\LaserArraySettingsControl.xaml" />
 	  <None Remove="Views\Settings\Measurement\MeasurementGeneralSettingsControl.xaml" />
 	  <None Remove="Views\Settings\Measurement\MultiCamSettingsControl.xaml" />
+	  <None Remove="Views\Settings\Window1.xaml" />
 	  <None Remove="Views\TestWindow.xaml" />
 	</ItemGroup>
 
@@ -38,6 +42,12 @@
 	  <Resource Include="Assets\Splash\EasySnap_Splash1.png">
 	    <CopyToOutputDirectory>Never</CopyToOutputDirectory>
 	  </Resource>
+	</ItemGroup>
+
+	<ItemGroup>
+		<Content Include="Icons\**\*.*">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
 	</ItemGroup>
 
 	<!-- WPF Pages and their code-behind -->
@@ -56,6 +66,7 @@
 		<Compile Include="Views\DeviceSettingsWindow.xaml.cs" />
 		<Compile Include="Views\GeneralSettingsWindow.xaml.cs" />
 		<Compile Include="Views\MeasurementToolsWindow.xaml.cs" />
+		<Compile Include="Views\SequenceSetupWindow.xaml.cs" />
 		<Compile Include="Views\Settings\General\GeneralFileSettingsControl.xaml.cs" />
 		<Compile Include="Views\Settings\General\GeneralInterfaceSettingsControl.xaml.cs" />
 		<Compile Include="Views\Settings\Measurement\InfraredCamSettingsControl.xaml.cs" />
@@ -97,6 +108,9 @@
 		  <Generator>MSBuild:Compile</Generator>
 		</Page>
 		<Page Include="Views\MeasurementToolsWindow.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</Page>
+		<Page Include="Views\SequenceSetupWindow.xaml">
 		  <Generator>MSBuild:Compile</Generator>
 		</Page>
 		<Page Include="Views\Settings\General\GeneralFileSettingsControl.xaml">
@@ -206,6 +220,9 @@
 		<Resource Include="Assets\Splash\EasySnap_Splash5.png">
 		  <CopyToOutputDirectory>Never</CopyToOutputDirectory>
 		</Resource>
+		<Resource Include="Icons\app-icon.ico">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Resource>
 	</ItemGroup>
 
 
@@ -215,5 +232,12 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="Icons\app-icon.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 </Project>
+
+
 

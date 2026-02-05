@@ -91,12 +91,16 @@ namespace EasySnapApp.Models
                 ThumbnailImage = scanResult.ThumbnailImage
             };
         }
-        
+
         /// <summary>
-        /// Create from database CapturedImage record
+        /// Create from database CapturedImage record - respects user's unit preferences
         /// </summary>
         public static ImageRecordViewModel FromCapturedImage(CapturedImage dbImage)
         {
+            // Read user's preferred units from settings
+            var dimUnit = Properties.Settings.Default.ExportDimUnit ?? "in";
+            var wgtUnit = Properties.Settings.Default.ExportWgtUnit ?? "lb";
+
             return new ImageRecordViewModel
             {
                 ImageId = dbImage.ImageId,
@@ -107,10 +111,48 @@ namespace EasySnapApp.Models
                 ThumbPath = dbImage.ThumbPath,
                 CaptureTimeUtc = dbImage.CaptureTimeUtc,
                 FileSizeBytes = dbImage.FileSizeBytes,
-                LengthIn = dbImage.DimX,
-                DepthIn = dbImage.DimY, // Map to existing DepthIn binding
-                HeightIn = dbImage.DimZ,
-                WeightLb = dbImage.WeightGrams.HasValue ? dbImage.WeightGrams.Value * 0.00220462 : null // Convert g to lb
+
+                // Convert from database units (mm/grams) to user's preferred units
+                LengthIn = ConvertDimensionFromDb(dbImage.DimX, dimUnit),
+                DepthIn = ConvertDimensionFromDb(dbImage.DimY, dimUnit),
+                HeightIn = ConvertDimensionFromDb(dbImage.DimZ, dimUnit),
+                WeightLb = ConvertWeightFromDb(dbImage.WeightGrams, wgtUnit)
+            };
+        }
+
+        /// <summary>
+        /// Convert dimension from database (mm) to user's preferred unit
+        /// </summary>
+        private static double? ConvertDimensionFromDb(double? mmValue, string targetUnit)
+        {
+            if (!mmValue.HasValue) return null;
+
+            var mm = mmValue.Value;
+
+            return targetUnit.ToLowerInvariant() switch
+            {
+                "in" => mm / 25.4,           // mm to inches
+                "cm" => mm / 10.0,           // mm to cm  
+                "mm" => mm,                  // mm to mm (no conversion)
+                _ => mm / 25.4               // default to inches
+            };
+        }
+
+        /// <summary>
+        /// Convert weight from database (grams) to user's preferred unit  
+        /// </summary>
+        private static double? ConvertWeightFromDb(double? gramsValue, string targetUnit)
+        {
+            if (!gramsValue.HasValue) return null;
+
+            var grams = gramsValue.Value;
+
+            return targetUnit.ToLowerInvariant() switch
+            {
+                "lb" => grams * 0.00220462,  // grams to pounds
+                "kg" => grams / 1000.0,      // grams to kg
+                "g" => grams,                // grams to grams (no conversion)
+                _ => grams * 0.00220462      // default to pounds
             };
         }
     }

@@ -797,26 +797,45 @@ namespace EasySnapApp
                 }
             });
         }
-        
+
         private string ExtractPartNumberFromPath(string filePath)
         {
             try
             {
                 // Path should be: Exports\[PartNumber]\[PartNumber].[Sequence].jpg
                 var fileName = Path.GetFileNameWithoutExtension(filePath);
-                var parts = fileName.Split('.');
-                if (parts.Length >= 1)
+                var expectedDigits = Properties.Settings.Default.SequenceDigits;
+                var lastDotIndex = fileName.LastIndexOf('.');
+
+                if (lastDotIndex > 0)
                 {
-                    return parts[0]; // Part number is before the first dot
+                    var potentialSequence = fileName.Substring(lastDotIndex + 1);
+
+                    // Verify the last part is actually a sequence number with expected digits
+                    if (int.TryParse(potentialSequence, out _) && potentialSequence.Length == expectedDigits)
+                    {
+                        // Everything before the last dot is the part number
+                        return fileName.Substring(0, lastDotIndex);
+                    }
                 }
+
+                // If no valid sequence found, return the whole filename as part number
+                return fileName;
             }
-            catch { }
-            
+            catch (Exception ex)
+            {
+                LogSessionMessage($"Error extracting part number from path {filePath}: {ex.Message}");
+            }
+
             return null;
         }
-        
+
         private int GetNextSequenceForPart(string partNumber)
         {
+            // Get settings
+            var startNumber = Properties.Settings.Default.SequenceStartNumber;
+            var increment = Properties.Settings.Default.SequenceIncrement;
+
             // PHASE 2: Use database if available
             if (_repository != null && !string.IsNullOrEmpty(partNumber))
             {
@@ -829,41 +848,48 @@ namespace EasySnapApp
                     LogSessionMessage($"DB sequence lookup failed: {ex.Message}");
                 }
             }
-            
-            // Fallback to in-memory calculation
+
+            // Fallback to in-memory calculation using settings
             var existingSequences = _results
                 .Where(r => string.Equals(r.PartNumber, partNumber, StringComparison.OrdinalIgnoreCase))
                 .Select(r => r.Sequence)
                 .ToList();
-                
+
             if (existingSequences.Any())
             {
-                return existingSequences.Max() + 2;
+                return existingSequences.Max() + increment; // Use settings increment
             }
-            
-            return 103; // Default starting sequence
+
+            return startNumber; // Use settings start number
         }
-        
+
         private int GetSequenceFromFilename(string filePath)
         {
             try
             {
                 var filename = Path.GetFileNameWithoutExtension(filePath);
-                var parts = filename.Split('.');
-                if (parts.Length >= 2 && int.TryParse(parts[1], out int seq))
+                var expectedDigits = Properties.Settings.Default.SequenceDigits;
+                var lastDotIndex = filename.LastIndexOf('.');
+
+                if (lastDotIndex > 0)
                 {
-                    return seq;
+                    var sequencePart = filename.Substring(lastDotIndex + 1);
+                    // Verify it's the expected length and numeric
+                    if (int.TryParse(sequencePart, out int seq) && sequencePart.Length == expectedDigits)
+                    {
+                        return seq;
+                    }
                 }
             }
             catch { }
-            
-            return 103; // Default sequence
+
+            return Properties.Settings.Default.SequenceStartNumber; // Use settings default
         }
-        
+
         #endregion
 
         #region EDSDK Smoke Test
-        
+
         /// <summary>
         /// STEP 1: Test EDSDK loading on startup - MUST PASS before camera operations
         /// </summary>
@@ -1644,7 +1670,7 @@ namespace EasySnapApp
 
         private void About_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("EasySnap v1.0\n© 2025 Phil",
+            MessageBox.Show("EasySnap v1.0\n© 2025 Phillip Donley",
                             "About",
                             MessageBoxButton.OK,
                             MessageBoxImage.Information);
@@ -1679,9 +1705,16 @@ namespace EasySnapApp
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
-        
+
+        private void SequenceSetup_Click(object sender, RoutedEventArgs e)
+        {
+            var sequenceWindow = new SequenceSetupWindow();
+            sequenceWindow.Owner = this;
+            sequenceWindow.ShowDialog();
+        }
+
         #region Log Context Menu Handlers
-        
+
         private void CopyAllLog_Click(object sender, RoutedEventArgs e)
         {
             try

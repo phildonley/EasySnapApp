@@ -286,5 +286,41 @@ namespace EasySnapApp.Properties {
                 this["AutoCollapseParts"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("3")]
+        public int SequenceDigits {
+            get {
+                return ((int)(this["SequenceDigits"]));
+            }
+            set {
+                this["SequenceDigits"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("103")]
+        public int SequenceStartNumber {
+            get {
+                return ((int)(this["SequenceStartNumber"]));
+            }
+            set {
+                this["SequenceStartNumber"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("2")]
+        public int SequenceIncrement {
+            get {
+                return ((int)(this["SequenceIncrement"]));
+            }
+            set {
+                this["SequenceIncrement"] = value;
+            }
+        }
     }
 }

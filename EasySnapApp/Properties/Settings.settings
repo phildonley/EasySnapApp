@@ -1,8 +1,6 @@
 ﻿<?xml version='1.0' encoding='utf-8'?>
-<SettingsFile xmlns="uri:settings" CurrentProfile="(Default)">
-  <Profiles>
-    <Profile Name="(Default)" />
-  </Profiles>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="" GeneratedClassName="Settings">
+  <Profiles />
   <Settings>
     <Setting Name="ScaleComPort" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
@@ -37,7 +35,6 @@
     <Setting Name="LastPartNumber" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
-    <!-- DIMS Export Settings -->
     <Setting Name="DimsSiteId" Type="System.String" Scope="User">
       <Value Profile="(Default)">733</Value>
     </Setting>
@@ -70,6 +67,15 @@
     </Setting>
     <Setting Name="AutoCollapseParts" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="SequenceDigits" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">3</Value>
+    </Setting>
+    <Setting Name="SequenceStartNumber" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">103</Value>
+    </Setting>
+    <Setting Name="SequenceIncrement" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">2</Value>
     </Setting>
   </Settings>
 </SettingsFile>
