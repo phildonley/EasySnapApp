@@ -13,6 +13,39 @@
 
     <Window.Resources>
         <SolidColorBrush x:Key="HeaderBrush" Color="#FF888888"/>
+
+        <!-- Modern Windows 11 Style ScrollViewer -->
+        <Style x:Key="ModernScrollViewer" TargetType="ScrollViewer">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollViewer">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <ScrollContentPresenter Grid.Column="0" Grid.Row="0"/>
+                            <ScrollBar x:Name="PART_VerticalScrollBar"
+                                     Grid.Column="1" Grid.Row="0"
+                                     Orientation="Vertical"
+                                     ViewportSize="{TemplateBinding ViewportHeight}"
+                                     Maximum="{TemplateBinding ScrollableHeight}"
+                                     Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"
+                                     Value="{TemplateBinding VerticalOffset}"
+                                     Width="8"
+                                     Background="#2A2A2E"
+                                     BorderThickness="0"
+                                     Margin="2"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style TargetType="DataGridColumnHeader">
             <Setter Property="Foreground" Value="{StaticResource HeaderBrush}"/>
         </Style>
@@ -84,15 +117,19 @@
             <Button x:Name="NewButton"
                     Content="New"
                     Click="NewButton_Click"
-                    Margin="0,0,8,0"/>
+                    Margin="0,0,8,0"
+                    Foreground="White"
+                    FontWeight="Bold"/>
+            <!-- Capture button commented out - may add remote capture feature later
             <Button x:Name="CaptureButton"
                     Content="Capture"
                     Click="CaptureButton_Click"/>
+            -->
         </ToolBar>
 
         <!-- Thumbnail Bar -->
         <Border DockPanel.Dock="Bottom"
-                Height="110"
+                Height="130"
                 Background="#18181A"
                 BorderBrush="#353535"
                 BorderThickness="1,1,1,0">
@@ -111,25 +148,33 @@
                                     BorderBrush="#444"
                                     BorderThickness="1"
                                     Margin="4"
-                                    Background="#2A2A2E">
+                                    Background="#2A2A2E"
+                                    Width="120">
                                 <StackPanel>
-                                    <Image Source="{Binding ThumbnailImage}"
-                                           Width="100"
-                                           Height="80"
-                                           Cursor="Hand"
-                                           Stretch="UniformToFill"
-                                           MouseLeftButtonUp="Thumbnail_MouseLeftButtonUp"/>
+                                    <!-- Image Container with proper centering -->
+                                    <Border Height="85" Background="#1A1A1A" Margin="2">
+                                        <Image Source="{Binding ThumbnailImage}"
+                                               MaxWidth="110"
+                                               MaxHeight="83"
+                                               Cursor="Hand"
+                                               Stretch="Uniform"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               MouseLeftButtonUp="Thumbnail_MouseLeftButtonUp"/>
+                                    </Border>
                                     <TextBlock Text="{Binding PartNumber}"
                                                FontSize="11"
                                                Foreground="#CCCCCC"
-                                               Margin="6,4,6,0"/>
+                                               Margin="6,4,6,0"
+                                               TextAlignment="Center"/>
                                     <TextBlock Text="{Binding Sequence}"
                                                FontSize="11"
                                                Foreground="#AAAAAA"
-                                               Margin="6,0,6,6"/>
+                                               Margin="6,0,6,6"
+                                               TextAlignment="Center"/>
                                 </StackPanel>
                             </Border>
-                            
+
                             <!-- Selection Highlighting Triggers -->
                             <DataTemplate.Triggers>
                                 <DataTrigger Binding="{Binding IsSelected}" Value="True">
@@ -288,7 +333,7 @@
                     BorderThickness="1"
                     Background="#2A2A2E"
                     Padding="12">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Style="{DynamicResource ModernScrollViewer}">
                     <StackPanel>
 
                         <TextBlock Text="Part Data"
@@ -297,30 +342,33 @@
                                    Margin="0,0,0,10"/>
 
                         <TextBlock Text="Weight (lb)" FontWeight="Bold"/>
-                        <DockPanel LastChildFill="False" Margin="0,6,0,10">
-                            <TextBox x:Name="WeightTextBox" Width="120" DockPanel.Dock="Left" Margin="0,0,8,0"/>
-                            <StackPanel Orientation="Horizontal">
+                        <DockPanel LastChildFill="True" Margin="0,6,0,10">
+                            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
                                 <Button x:Name="WeightPlusButton" Click="WeightPlusButton_Click" 
-                                        Content="+" Width="30" Height="30" Margin="2"
-                                        ToolTip="Capture weight from scale" FontWeight="Bold" />
-                                <Button x:Name="WeightMinusButton" Click="WeightMinusButton_Click" 
-                                        Content="-" Width="30" Height="30" Margin="2"
-                                        ToolTip="Tare scale and clear weight" FontWeight="Bold" />
+                                        Content="+" Width="30" Height="30" Margin="2,0,0,0"
+                                        ToolTip="Listen for scale print command" FontWeight="Bold" />
+                                <!-- Minus button removed - not needed for this scale -->
                             </StackPanel>
+                            <TextBox x:Name="WeightTextBox" Margin="0,0,8,0"/>
                         </DockPanel>
+
+                        <!-- Scale Status Indicator -->
+                        <TextBlock x:Name="ScaleStatusIndicator" Text="" 
+                                   Foreground="#FFA500" FontStyle="Italic" 
+                                   Margin="0,0,0,8" Visibility="Collapsed"/>
 
                         <TextBlock Text="Dims (in)" FontWeight="Bold"/>
                         <TextBlock Text="Length" Margin="0,6,0,2"/>
-                        <TextBox x:Name="LengthTextBox"/>
+                        <TextBox x:Name="LengthTextBox" MaxWidth="200" HorizontalAlignment="Stretch"/>
 
                         <TextBlock Text="Width" Margin="0,6,0,2"/>
-                        <TextBox x:Name="WidthTextBox"/>
+                        <TextBox x:Name="WidthTextBox" MaxWidth="200" HorizontalAlignment="Stretch"/>
 
                         <TextBlock Text="Height" Margin="0,6,0,2"/>
-                        <TextBox x:Name="HeightTextBox"/>
+                        <TextBox x:Name="HeightTextBox" MaxWidth="200" HorizontalAlignment="Stretch"/>
 
                         <Button x:Name="ApplyPartDataButton"
-                                Content="Apply to Part"
+                                Content="Apply Dimensions"
                                 Click="ApplyPartDataButton_Click"
                                 Height="34"
                                 Margin="0,8,0,6"/>
@@ -331,7 +379,8 @@
                         <TextBox x:Name="NotesTextBox"
                                  Height="110"
                                  TextWrapping="Wrap"
-                                 AcceptsReturn="True"/>
+                                 AcceptsReturn="True"
+                                 MaxWidth="250" HorizontalAlignment="Stretch"/>
 
                         <Button x:Name="ExportCsvButton"
                                 Content="Export CSV"
@@ -352,6 +401,7 @@
                             <ScrollViewer x:Name="LogScrollViewer"
                                           VerticalScrollBarVisibility="Auto"
                                           HorizontalScrollBarVisibility="Auto"
+                                          Style="{DynamicResource ModernScrollViewer}"
                                           Padding="4">
                                 <TextBox x:Name="SessionLogTextBox"
                                          FontSize="11"

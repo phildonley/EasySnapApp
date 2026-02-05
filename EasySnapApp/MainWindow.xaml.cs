@@ -14,6 +14,7 @@ using EasySnapApp.Views;
 using EasySnapApp.Utils;
 using EasySnapApp.Data; // PHASE 2: Database integration
 using Microsoft.Win32;
+using System.Windows.Threading;
 using Path = System.IO.Path;
 
 namespace EasySnapApp
@@ -61,6 +62,10 @@ namespace EasySnapApp
 
         // Undo functionality
         private readonly Stack<UndoAction> _undoStack = new Stack<UndoAction>();
+
+        // UI Animation fields
+        private System.Windows.Threading.DispatcherTimer _scaleWaitingTimer;
+        private int _scaleWaitingDots = 0;
 
         // ADD THIS BLOCK HERE:
         public enum UndoActionType
@@ -1168,9 +1173,11 @@ namespace EasySnapApp
 
             PreviewImage.Source = null;
             PreviewMetaTextBlock.Text = "";
-
             // Clear weight field for new part (but keep scale tared)
             WeightTextBox.Text = "";
+
+            // Reset Apply Dimensions button for new part
+            ResetApplyDimensionsButton();
 
             StatusTextBlock.Text = $"Started session for part {part}.";
             LogSessionMessage($"Session started for {part}");
@@ -1433,7 +1440,19 @@ namespace EasySnapApp
                 updatedRows++;
             }
 
-            StatusTextBlock.Text = $"Applied dims/weight to part {part}.";
+            // Update ImageRecords as well
+            foreach (var record in _imageRecords.Where(r => string.Equals(r.PartNumber, part, StringComparison.OrdinalIgnoreCase)))
+            {
+                if (pd.LengthIn.HasValue) record.LengthIn = pd.LengthIn.Value;
+                if (pd.WidthIn.HasValue) record.DepthIn = pd.WidthIn.Value; // Width -> DepthIn
+                if (pd.HeightIn.HasValue) record.HeightIn = pd.HeightIn.Value;
+                if (pd.WeightLb.HasValue) record.WeightLb = pd.WeightLb.Value;
+            }
+
+            // Show success feedback with green button
+            ShowApplyDimensionsSuccess();
+
+            StatusTextBlock.Text = $"Applied dimensions/weight to part {part}.";
             var logDetails = new List<string>();
             if (pd.LengthIn.HasValue) logDetails.Add($"L={pd.LengthIn.Value:F2}\"");
             if (pd.WidthIn.HasValue) logDetails.Add($"W={pd.WidthIn.Value:F2}\"");
@@ -1511,9 +1530,19 @@ namespace EasySnapApp
             {
                 try
                 {
-                    if (showMessages) LogSessionMessage($"Reading scale on {_scaleSvc.PortName}...");
+                    if (showMessages)
+                    {
+                        StartScaleWaitingAnimation();
+                        LogSessionMessage($"Listening for scale print on {_scaleSvc.PortName}...");
+                    }
+
                     weightLb = _scaleSvc.CaptureWeightLbOnce();
-                    if (showMessages) LogSessionMessage($"Scale read successful: {weightLb:F2} lb (Raw: '{_scaleSvc.LastRawLine}')");
+
+                    if (showMessages)
+                    {
+                        StopScaleWaitingAnimation();
+                        LogSessionMessage($"Scale read successful: {weightLb:F2} lb (Raw: '{_scaleSvc.LastRawLine}')");
+                    }
                     scaleSuccess = true;
 
                     // Update the weight textbox with scale reading
@@ -1523,6 +1552,7 @@ namespace EasySnapApp
                 {
                     if (showMessages)
                     {
+                        StopScaleWaitingAnimation();
                         LogSessionMessage($"Scale read failed: {ex.Message}");
                         if (!string.IsNullOrEmpty(_scaleSvc.LastRawLine))
                         {
@@ -2317,7 +2347,78 @@ namespace EasySnapApp
             }
             return false;
         }
-        
+
+        #region UI Animation Methods
+
+        /// <summary>
+        /// Start the "waiting for scale..." animation
+        /// </summary>
+        private void StartScaleWaitingAnimation()
+        {
+            if (ScaleStatusIndicator == null) return;
+
+            _scaleWaitingDots = 0;
+            ScaleStatusIndicator.Text = "Waiting for scale...";
+            ScaleStatusIndicator.Visibility = Visibility.Visible;
+
+            _scaleWaitingTimer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(500)
+            };
+
+            _scaleWaitingTimer.Tick += (s, e) =>
+            {
+                _scaleWaitingDots = (_scaleWaitingDots + 1) % 4;
+                var dots = new string('.', _scaleWaitingDots + 1);
+                ScaleStatusIndicator.Text = $"Waiting for scale{dots}";
+            };
+
+            _scaleWaitingTimer.Start();
+        }
+
+        /// <summary>
+        /// Stop the "waiting for scale..." animation
+        /// </summary>
+        private void StopScaleWaitingAnimation()
+        {
+            _scaleWaitingTimer?.Stop();
+            _scaleWaitingTimer = null;
+
+            if (ScaleStatusIndicator != null)
+            {
+                ScaleStatusIndicator.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        /// <summary>
+        /// Show green feedback for successful dimension application
+        /// </summary>
+        private void ShowApplyDimensionsSuccess()
+        {
+            if (ApplyPartDataButton == null) return;
+
+            // Change button appearance to show success - stays until new part
+            ApplyPartDataButton.Content = "✓ Dimensions Applied";
+            ApplyPartDataButton.Background = new SolidColorBrush(Color.FromRgb(0, 120, 70)); // Dark green
+            ApplyPartDataButton.Foreground = new SolidColorBrush(Colors.White);
+
+            // No timer - button stays in this state until new part is started
+        }
+
+        /// <summary>
+        /// Reset the Apply Dimensions button to normal appearance
+        /// </summary>
+        private void ResetApplyDimensionsButton()
+        {
+            if (ApplyPartDataButton == null) return;
+
+            ApplyPartDataButton.Content = "Apply Dimensions";
+            ApplyPartDataButton.ClearValue(Button.BackgroundProperty); // Use default
+            ApplyPartDataButton.ClearValue(Button.ForegroundProperty); // Use default
+        }
+
+        #endregion
+
         #endregion
     }
 }
