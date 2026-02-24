@@ -82,6 +82,10 @@
                 <MenuItem Header="Photography Tools..." Click="PhotographyTools_Click"/>
                 <Separator/>
                 <MenuItem Header="Sequence Setup..." Click="SequenceSetup_Click"/>
+                <Separator/>
+                <MenuItem Header="Filename Pattern..." Click="FilenamePattern_Click"/>
+                <Separator/>
+                <MenuItem Header="Import Parts Data..." Click="ImportPartsData_Click"/>
             </MenuItem>
             <MenuItem Header="_Export">
                 <MenuItem Header="Export Images..." Click="OpenExportWindow_Click"/>
@@ -167,7 +171,7 @@
                                                Foreground="#CCCCCC"
                                                Margin="6,4,6,0"
                                                TextAlignment="Center"/>
-                                    <TextBlock Text="{Binding Sequence}"
+                                    <TextBlock Text="{Binding SequenceDisplay}"
                                                FontSize="11"
                                                Foreground="#AAAAAA"
                                                Margin="6,0,6,6"
@@ -485,7 +489,7 @@
                                             Binding="{Binding PartNumber}"
                                             Width="*"/>
                         <DataGridTextColumn Header="Seq"
-                                            Binding="{Binding Sequence}"
+                                            Binding="{Binding SequenceDisplay}"
                                             Width="70"/>
                         <DataGridTextColumn Header="File"
                                             Binding="{Binding ImageFileName}"

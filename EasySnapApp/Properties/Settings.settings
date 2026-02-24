@@ -1,5 +1,5 @@
 ﻿<?xml version='1.0' encoding='utf-8'?>
-<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="" GeneratedClassName="Settings">
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="EasySnapApp.Properties" GeneratedClassName="Settings">
   <Profiles />
   <Settings>
     <Setting Name="ScaleComPort" Type="System.String" Scope="User">
@@ -76,6 +76,12 @@
     </Setting>
     <Setting Name="SequenceIncrement" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">2</Value>
+    </Setting>
+    <Setting Name="FilenamePatternString" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="SequencePadding" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
     </Setting>
   </Settings>
 </SettingsFile>

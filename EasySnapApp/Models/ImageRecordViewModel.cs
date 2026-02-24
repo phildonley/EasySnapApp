@@ -19,6 +19,44 @@ namespace EasySnapApp.Models
         public string SessionId { get; set; }
         public string PartNumber { get; set; }
         public int Sequence { get; set; }
+        public string SequenceDisplay
+        {
+            get
+            {
+                // Primary: derive from the actual filename already on disk.
+                // This means the column always matches the real file name,
+                // even if the user changes SequenceDigits/SequencePadding later.
+                if (!string.IsNullOrEmpty(FileName))
+                {
+                    var stem = System.IO.Path.GetFileNameWithoutExtension(FileName);
+                    // Strip .thumb suffix if somehow present
+                    if (stem.EndsWith(".thumb", StringComparison.OrdinalIgnoreCase))
+                        stem = stem.Substring(0, stem.Length - 6);
+                    var lastDot = stem.LastIndexOf('.');
+                    if (lastDot >= 0)
+                    {
+                        var seqPart = stem.Substring(lastDot + 1);
+                        if (int.TryParse(seqPart, out _))
+                            return seqPart; // Return exactly as it appears in the filename
+                    }
+                }
+
+                // Fallback: no filename yet (new capture not yet saved).
+                // Format using current settings so the preview is accurate.
+                try
+                {
+                    var pad = Properties.Settings.Default.SequencePadding;
+                    var digits = Properties.Settings.Default.SequenceDigits;
+                    if (pad && digits > 0)
+                        return Sequence.ToString(new string('0', digits));
+                    return Sequence.ToString();
+                }
+                catch
+                {
+                    return Sequence.ToString();
+                }
+            }
+        }
         public string FullPath { get; set; }
         public string ThumbPath { get; set; }
         public string FileName => System.IO.Path.GetFileName(FullPath);
@@ -57,9 +95,9 @@ namespace EasySnapApp.Models
                 }
             }
         }
-        
+
         // Display properties
-        public string DisplayName => $"{PartNumber}_{Sequence:D3}";
+        public string DisplayName => $"{PartNumber}_{SequenceDisplay}";
         public string FileSizeMB => $"{FileSizeBytes / (1024.0 * 1024.0):F2} MB";
         public string TimeStamp => CaptureTimeUtc.ToString("yyyyMMdd_HHmmss");
         public string ImageFileName => FileName;

@@ -33,6 +33,7 @@
                 <RowDefinition Height="35"/>
                 <RowDefinition Height="35"/>
                 <RowDefinition Height="35"/>
+                <RowDefinition Height="35"/>
             </Grid.RowDefinitions>
 
             <!-- Number of Digits -->
@@ -67,6 +68,18 @@
                      VerticalAlignment="Center" TextChanged="Settings_Changed" 
                      PreviewTextInput="NumberOnly_PreviewTextInput"/>
             <TextBlock Grid.Row="2" Grid.Column="2" Text="(spacing between sequence numbers - any positive number)" 
+                       VerticalAlignment="Center" Foreground="#AAAAAA" Margin="10,0,0,0"/>
+
+            <!-- Pad with leading zeros -->
+            <Label Grid.Row="3" Grid.Column="0" Content="Pad with zeros:"
+                   VerticalAlignment="Center" Foreground="#F0F0F0"/>
+            <CheckBox Grid.Row="3" Grid.Column="1" x:Name="chkPadding"
+                      VerticalAlignment="Center"
+                      IsChecked="True"
+                      Checked="Settings_Changed"
+                      Unchecked="Settings_Changed"/>
+            <TextBlock Grid.Row="3" Grid.Column="2"
+                       Text="(e.g. checked: 001, 003, 005  /  unchecked: 1, 3, 5)"
                        VerticalAlignment="Center" Foreground="#AAAAAA" Margin="10,0,0,0"/>
         </Grid>
 

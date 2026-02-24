@@ -322,5 +322,29 @@ namespace EasySnapApp.Properties {
                 this["SequenceIncrement"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string FilenamePatternString {
+            get {
+                return ((string)(this["FilenamePatternString"]));
+            }
+            set {
+                this["FilenamePatternString"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool SequencePadding {
+            get {
+                return ((bool)(this["SequencePadding"]));
+            }
+            set {
+                this["SequencePadding"] = value;
+            }
+        }
     }
 }

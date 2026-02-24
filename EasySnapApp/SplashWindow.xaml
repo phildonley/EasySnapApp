@@ -7,8 +7,8 @@
         Topmost="True"
         AllowsTransparency="True"
         Background="Transparent"
-        Width="1600"
-        Height="1000"
+        Width="800"
+        Height="500"
         WindowStartupLocation="CenterScreen">
 
     <Grid>
@@ -22,25 +22,25 @@
         <Canvas>
 
             <!-- Loading / status text area -->
-            <!-- 540 x 90 at X=54, Y=340 -->
-            <TextBlock Canvas.Left="54"
-                   Canvas.Top="340"
-                   Width="540"
-                   Height="90"
+            <!-- 270 x 45 at X=27, Y=170 -->
+            <TextBlock Canvas.Left="27"
+                   Canvas.Top="170"
+                   Width="270"
+                   Height="45"
                    Text="{Binding StatusText}"
                    FontFamily="Segoe UI"
-                   FontSize="28"
+                   FontSize="14"
                    FontWeight="SemiBold"
                    TextWrapping="Wrap"
                    Foreground="#0C5A98"
                    VerticalAlignment="Center" />
 
             <!-- Footer / copyright / version area -->
-            <!-- 540 x 400 at X=54, Y=560 -->
-            <TextBlock Canvas.Left="54"
-                   Canvas.Top="560"
-                   Width="540"
-                   Height="400"
+            <!-- 270 x 200 at X=27, Y=280 -->
+            <TextBlock Canvas.Left="27"
+                   Canvas.Top="280"
+                   Width="270"
+                   Height="200"
                    Text="{Binding FooterText}"
                    FontFamily="Segoe UI"
                    FontSize="18"

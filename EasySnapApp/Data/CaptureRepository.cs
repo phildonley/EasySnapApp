@@ -254,18 +254,17 @@ namespace EasySnapApp.Data
         /// Get the next sequence number for a part (Phase 3.9: Gap reuse)
         /// Returns smallest available sequence ≥ 103
         /// </summary>
-        public int GetNextSequenceForPart(string partNumber)
+        public int GetNextSequenceForPart(string partNumber, int startNumber = 103, int increment = 1)
         {
             using (var connection = _database.GetConnection())
             {
                 connection.Open();
 
-                // Get all existing sequences for this part
                 var selectSql = @"
-                    SELECT Sequence 
-                    FROM CapturedImages 
-                    WHERE PartNumber = @partNumber AND IsDeleted = 0 AND DeletedAt IS NULL
-                    ORDER BY Sequence ASC";
+            SELECT Sequence 
+            FROM CapturedImages 
+            WHERE PartNumber = @partNumber AND IsDeleted = 0 AND DeletedAt IS NULL
+            ORDER BY Sequence ASC";
 
                 var existingSequences = new List<int>();
                 using (var command = new SQLiteCommand(selectSql, connection))
@@ -274,27 +273,22 @@ namespace EasySnapApp.Data
                     using (var reader = command.ExecuteReader())
                     {
                         while (reader.Read())
-                        {
                             existingSequences.Add(reader.GetInt32(0));
-                        }
                     }
                 }
 
-                // Find smallest gap starting from 103
-                int nextSequence = 103;
-                foreach (var seq in existingSequences)
-                {
-                    if (seq == nextSequence)
-                    {
-                        nextSequence++;
-                    }
-                    else if (seq > nextSequence)
-                    {
-                        break; // Found a gap
-                    }
-                }
+                if (existingSequences.Count == 0)
+                    return startNumber;
 
-                return nextSequence;
+                // Find the next sequence that fits the increment pattern and isn't taken
+                int candidate = startNumber;
+                var seqSet = new HashSet<int>(existingSequences);
+
+                // Walk up by increment until we find a gap
+                while (seqSet.Contains(candidate))
+                    candidate += increment;
+
+                return candidate;
             }
         }
 

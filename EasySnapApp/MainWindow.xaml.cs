@@ -31,6 +31,7 @@ namespace EasySnapApp
         // PHASE 2: Database persistence
         private readonly EasySnapDb _database;
         private readonly CaptureRepository _repository;
+        private readonly PartsDataRepository _partsRepository; // PHASE 1: Parts data for dynamic naming
         private string _currentPartNumber;
         private CaptureSession _currentSession;
 
@@ -105,6 +106,7 @@ namespace EasySnapApp
                 _database = new EasySnapDb();
                 _repository = new CaptureRepository(_database);
                 _database.InitializeDatabase();
+                _partsRepository = new PartsDataRepository(_database);
                 LogSessionMessage($"DB initialized at {_database.DatabasePath}");
             }
             catch (Exception ex)
@@ -805,31 +807,44 @@ namespace EasySnapApp
 
         private string ExtractPartNumberFromPath(string filePath)
         {
+            // Phase 2: Primary method - derive from parent folder name.
+            // Files live at Exports\{PartNumber}\{anything}.jpg regardless of filename format,
+            // so the folder is always the authoritative source.
             try
             {
-                // Path should be: Exports\[PartNumber]\[PartNumber].[Sequence].jpg
+                var directory = Path.GetDirectoryName(filePath);
+                var folderName = Path.GetFileName(directory);
+
+                if (!string.IsNullOrEmpty(folderName))
+                {
+                    var exportsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Exports");
+                    var parentOfFolder = Path.GetDirectoryName(directory);
+                    if (string.Equals(parentOfFolder, exportsPath, StringComparison.OrdinalIgnoreCase))
+                        return folderName;   // e.g. "0090-193"
+                }
+            }
+            catch (Exception ex)
+            {
+                LogSessionMessage($"ExtractPartNumber (folder method) error: {ex.Message}");
+            }
+
+            // Fallback: original dot-parsing for legacy paths
+            try
+            {
                 var fileName = Path.GetFileNameWithoutExtension(filePath);
                 var expectedDigits = Properties.Settings.Default.SequenceDigits;
                 var lastDotIndex = fileName.LastIndexOf('.');
-
                 if (lastDotIndex > 0)
                 {
-                    var potentialSequence = fileName.Substring(lastDotIndex + 1);
-
-                    // Verify the last part is actually a sequence number with expected digits
-                    if (int.TryParse(potentialSequence, out _) && potentialSequence.Length == expectedDigits)
-                    {
-                        // Everything before the last dot is the part number
+                    var potentialSeq = fileName.Substring(lastDotIndex + 1);
+                    if (int.TryParse(potentialSeq, out int parsedSeq) && potentialSeq.Length == expectedDigits)
                         return fileName.Substring(0, lastDotIndex);
-                    }
                 }
-
-                // If no valid sequence found, return the whole filename as part number
                 return fileName;
             }
             catch (Exception ex)
             {
-                LogSessionMessage($"Error extracting part number from path {filePath}: {ex.Message}");
+                LogSessionMessage($"ExtractPartNumber (fallback) error: {ex.Message}");
             }
 
             return null;
@@ -846,7 +861,7 @@ namespace EasySnapApp
             {
                 try
                 {
-                    return _repository.GetNextSequenceForPart(partNumber);
+                    return _repository.GetNextSequenceForPart(partNumber, startNumber, increment);
                 }
                 catch (Exception ex)
                 {
@@ -873,22 +888,20 @@ namespace EasySnapApp
             try
             {
                 var filename = Path.GetFileNameWithoutExtension(filePath);
-                var expectedDigits = Properties.Settings.Default.SequenceDigits;
                 var lastDotIndex = filename.LastIndexOf('.');
 
                 if (lastDotIndex > 0)
                 {
                     var sequencePart = filename.Substring(lastDotIndex + 1);
-                    // Verify it's the expected length and numeric
-                    if (int.TryParse(sequencePart, out int seq) && sequencePart.Length == expectedDigits)
-                    {
+                    // Accept any all-digit segment — don't enforce digit length so
+                    // both padded (001) and unpadded (1) formats parse correctly
+                    if (int.TryParse(sequencePart, out int seq))
                         return seq;
-                    }
                 }
             }
             catch { }
 
-            return Properties.Settings.Default.SequenceStartNumber; // Use settings default
+            return Properties.Settings.Default.SequenceStartNumber;
         }
 
         #endregion
@@ -1743,6 +1756,65 @@ namespace EasySnapApp
             sequenceWindow.ShowDialog();
         }
 
+        private void FilenamePattern_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var builderWindow = new EasySnapApp.Views.FileNameBuilderWindow(_partsRepository)
+                {
+                    Owner = this
+                };
+                if (builderWindow.ShowDialog() == true)
+                {
+                    LogSessionMessage("Filename pattern updated — new pattern active for next capture");
+                    StatusTextBlock.Text = "Filename pattern saved.";
+                }
+            }
+            catch (Exception ex)
+            {
+                LogSessionMessage($"Error opening Filename Pattern builder: {ex.Message}");
+                MessageBox.Show($"Error opening builder: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void ImportPartsData_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (_partsRepository == null)
+                {
+                    LogSessionMessage("Parts data repository not available");
+                    MessageBox.Show("Parts data repository is not available. Please restart the application.",
+                        "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                var importWindow = new EasySnapApp.Views.DataImportWindow(_partsRepository)
+                {
+                    Owner = this
+                };
+
+                LogSessionMessage("Opening Data Import Window");
+                importWindow.ShowDialog();
+
+                // Log the number of parts available after import
+                var partCount = _partsRepository.GetPartDataCount();
+                LogSessionMessage($"Parts data available: {partCount:N0} records");
+
+                if (partCount > 0)
+                {
+                    StatusTextBlock.Text = $"Parts database ready: {partCount:N0} records available for dynamic naming";
+                }
+            }
+            catch (Exception ex)
+            {
+                LogSessionMessage($"Error opening Data Import window: {ex.Message}");
+                MessageBox.Show($"Error opening Data Import window: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         #region Log Context Menu Handlers
 
         private void CopyAllLog_Click(object sender, RoutedEventArgs e)
@@ -1961,7 +2033,7 @@ namespace EasySnapApp
                         LogSessionMessage("Could not determine part number from photo path");
                         return;
                     }
-                    
+
                     // Save to database first
                     if (_repository != null)
                     {
@@ -1970,14 +2042,61 @@ namespace EasySnapApp
                             var sequence = GetSequenceFromFilename(fullImagePath);
                             var fileInfo = new FileInfo(fullImagePath);
 
+                            // ── Phase 2: Dynamic filename rename ─────────────────────────────
+                            string finalFullPath = fullImagePath;
+                            string finalThumbPath = thumbnailPath;
+                            try
+                            {
+                                string tmsId = null;
+                                string displayName = null;
+
+                                if (_partsRepository != null)
+                                {
+                                    tmsId = _partsRepository.GetTmsIdForPart(partNumber);
+                                    displayName = _partsRepository.GetDisplayNameForPart(partNumber);
+                                }
+
+                                bool hasDynamicData = !string.IsNullOrWhiteSpace(tmsId)
+                                                   && !string.IsNullOrWhiteSpace(displayName);
+
+                                if (hasDynamicData)
+                                {
+                                    var (renamedFull, renamedThumb) = FileNameGenerator.RenameCapture(
+                                        fullImagePath, thumbnailPath,
+                                        tmsId, displayName, partNumber, sequence);
+
+                                    finalFullPath = renamedFull;
+                                    finalThumbPath = renamedThumb ?? thumbnailPath;
+
+                                    LogSessionMessage(
+                                        $"DYNAMIC NAME: {Path.GetFileName(fullImagePath)} " +
+                                        $"→ {Path.GetFileName(finalFullPath)}");
+                                }
+                                else
+                                {
+                                    LogSessionMessage(
+                                        $"FALLBACK NAME: {Path.GetFileName(fullImagePath)} " +
+                                        $"(no parts data for '{partNumber}')");
+                                }
+                            }
+                            catch (Exception renameEx)
+                            {
+                                LogSessionMessage($"Rename failed, keeping original name: {renameEx.Message}");
+                                // finalFullPath / finalThumbPath stay as originals — safe to continue
+                            }
+                            // ────────────────────────────────────────────────────────────────
+
+                            // Recompute fileInfo after potential rename
+                            fileInfo = new FileInfo(finalFullPath);
+
                             var capturedImage = new CapturedImage
                             {
                                 ImageId = Guid.NewGuid().ToString(),
                                 SessionId = _currentSession?.SessionId ?? Guid.NewGuid().ToString(),
                                 PartNumber = partNumber,
                                 Sequence = sequence,
-                                FullPath = fullImagePath,
-                                ThumbPath = thumbnailPath,
+                                FullPath = finalFullPath,
+                                ThumbPath = finalThumbPath,
                                 CaptureTimeUtc = DateTime.UtcNow,
                                 FileSizeBytes = fileInfo.Length,
                                 IsDeleted = false
@@ -1986,14 +2105,14 @@ namespace EasySnapApp
                             // COPY DIMENSIONS FROM _partData TO DATABASE RECORD
                             if (_partData.TryGetValue(partNumber, out var dbPartData))
                             {
-                                capturedImage.WeightGrams = dbPartData.WeightLb * 453.592; // Convert lb to grams
-                                capturedImage.DimX = dbPartData.LengthIn * 25.4; // Convert inches to mm
-                                capturedImage.DimY = dbPartData.WidthIn * 25.4; // Convert inches to mm  
-                                capturedImage.DimZ = dbPartData.HeightIn * 25.4; // Convert inches to mm
+                                capturedImage.WeightGrams = dbPartData.WeightLb * 453.592;
+                                capturedImage.DimX = dbPartData.LengthIn * 25.4;
+                                capturedImage.DimY = dbPartData.WidthIn * 25.4;
+                                capturedImage.DimZ = dbPartData.HeightIn * 25.4;
                             }
 
                             _repository.InsertCapturedImage(capturedImage);
-                            
+
                             // Create view model and add to UI
                             var viewModel = ImageRecordViewModel.FromCapturedImage(capturedImage);
                             LoadThumbnailForViewModel(viewModel);

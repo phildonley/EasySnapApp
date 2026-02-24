@@ -37,6 +37,9 @@ namespace EasySnapApp.Views
 
             // Set increment (now a text box instead of dropdown)
             txtIncrement.Text = increment.ToString();
+
+            // Load padding setting
+            chkPadding.IsChecked = Properties.Settings.Default.SequencePadding;
         }
 
         private void Settings_Changed(object sender, EventArgs e)
@@ -57,14 +60,16 @@ namespace EasySnapApp.Views
                 var increment = int.Parse(txtIncrement.Text);
 
                 // Generate preview sequence
+                var pad = chkPadding.IsChecked == true;
+                var fmt = pad ? new string('0', digits) : "0";
                 var preview = string.Join(", ",
-                    Enumerable.Range(0, 5).Select(i => startNum + (i * increment)));
+                    Enumerable.Range(0, 5).Select(i => (startNum + (i * increment)).ToString(fmt)));
 
                 txtPreview.Text = preview;
 
                 // Update parsing info
                 runDigits.Text = digits.ToString();
-                var exampleSeq = startNum.ToString().PadLeft(digits, '0');
+                var exampleSeq = startNum.ToString(fmt);
                 runFileExample.Text = $"07.0975.987GT.{exampleSeq}.jpg";
 
                 // Enable save button if settings are valid
@@ -232,6 +237,7 @@ namespace EasySnapApp.Views
                 Properties.Settings.Default.SequenceDigits = digits;
                 Properties.Settings.Default.SequenceStartNumber = startNum;
                 Properties.Settings.Default.SequenceIncrement = increment;
+                Properties.Settings.Default.SequencePadding = chkPadding.IsChecked == true;
                 Properties.Settings.Default.Save();
 
                 MessageBox.Show("Sequence settings saved successfully!", "Settings Saved",
@@ -260,6 +266,7 @@ namespace EasySnapApp.Views
                 cmbDigits.SelectedIndex = 1; // 3 digits
                 txtStartNumber.Text = "103";
                 txtIncrement.Text = "2";  // Now a text box
+                chkPadding.IsChecked = true;
 
                 _isLoading = false;
                 UpdatePreview();
