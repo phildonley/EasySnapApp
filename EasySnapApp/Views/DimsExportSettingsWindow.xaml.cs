@@ -20,15 +20,20 @@ namespace EasySnapApp.Views
             try
             {
                 var settings = DimsExportSettings.Load();
-                
+
                 chkEnableDimsOverride.IsChecked = settings.EnableOverride;
                 txtSiteId.Text = settings.SiteId;
                 txtFactor.Text = settings.Factor;
                 txtDimUnit.Text = settings.DimUnit;
                 txtWgtUnit.Text = settings.WgtUnit;
                 txtVolUnit.Text = settings.VolUnit;
+                txtOptInfo1.Text = settings.OptInfo1;
                 txtOptInfo2.Text = settings.OptInfo2;
                 txtOptInfo3.Text = settings.OptInfo3;
+                txtOptInfo4.Text = settings.OptInfo4;
+                txtOptInfo5.Text = settings.OptInfo5;
+                txtOptInfo6.Text = settings.OptInfo6;
+                txtOptInfo7.Text = settings.OptInfo7;
                 txtOptInfo8.Text = settings.OptInfo8;
                 txtUpdated.Text = settings.Updated;
             }
@@ -55,8 +60,13 @@ namespace EasySnapApp.Views
                     DimUnit = txtDimUnit.Text?.Trim() ?? "in",
                     WgtUnit = txtWgtUnit.Text?.Trim() ?? "lb",
                     VolUnit = txtVolUnit.Text?.Trim() ?? "in",
+                    OptInfo1 = txtOptInfo1.Text?.Trim() ?? "",
                     OptInfo2 = txtOptInfo2.Text?.Trim() ?? "Y",
-                    OptInfo3 = txtOptInfo3.Text?.Trim() ?? "Y",
+                    OptInfo3 = txtOptInfo3.Text?.Trim() ?? "N",
+                    OptInfo4 = txtOptInfo4.Text?.Trim() ?? "",
+                    OptInfo5 = txtOptInfo5.Text?.Trim() ?? "",
+                    OptInfo6 = txtOptInfo6.Text?.Trim() ?? "",
+                    OptInfo7 = txtOptInfo7.Text?.Trim() ?? "",
                     OptInfo8 = txtOptInfo8.Text?.Trim() ?? "0",
                     Updated = txtUpdated.Text?.Trim() ?? "N"
                 };
@@ -104,8 +114,13 @@ namespace EasySnapApp.Views
             txtDimUnit.Text = "in";
             txtWgtUnit.Text = "lb";
             txtVolUnit.Text = "in";
+            txtOptInfo1.Text = "";
             txtOptInfo2.Text = "Y";
-            txtOptInfo3.Text = "Y";
+            txtOptInfo3.Text = "N";
+            txtOptInfo4.Text = "";
+            txtOptInfo5.Text = "";
+            txtOptInfo6.Text = "";
+            txtOptInfo7.Text = "";
             txtOptInfo8.Text = "0";
             txtUpdated.Text = "N";
         }

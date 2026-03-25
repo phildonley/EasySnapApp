@@ -73,6 +73,8 @@
             </MenuItem>
             <MenuItem Header="_Edit">
                 <MenuItem Header="_Undo" InputGestureText="Ctrl+Z" Click="UndoMenuItem_Click"/>
+                <Separator/>
+                <MenuItem Header="Clear Exported Images" Click="ClearExportedImages_Click"/>
             </MenuItem>
             <MenuItem Header="_Settings">
                 <MenuItem Header="DIMS Export Settings..." Click="OpenSettings_Click"/>

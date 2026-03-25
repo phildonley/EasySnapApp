@@ -36,6 +36,7 @@ namespace EasySnapApp.Data
         public int TmsIdColumnIndex { get; set; } = -1;
         public int DisplayNameColumnIndex { get; set; } = -1;
         public int DescriptionColumnIndex { get; set; } = -1;
+        public int ImageColumnIndex { get; set; } = -1;
         public List<int> AdditionalColumnIndexes { get; set; } = new List<int>();
     }
 
@@ -392,6 +393,55 @@ namespace EasySnapApp.Data
         }
 
         /// <summary>
+        /// Look up the value of a specific column for a part number.
+        /// Used to check if the imported database indicates images exist for this part.
+        /// </summary>
+        public string GetColumnValueForPart(string partNumber, string columnName)
+        {
+            if (string.IsNullOrEmpty(partNumber) || string.IsNullOrEmpty(columnName))
+                return null;
+
+            using (var connection = _database.GetConnection())
+            {
+                connection.Open();
+
+                // Sanitize column name to prevent SQL injection
+                var sanitizedColumn = _database.SanitizeColumnName(columnName);
+
+                // Check if column exists in the table
+                var pragmaSql = $"PRAGMA table_info(PartsData)";
+                bool columnExists = false;
+                using (var pragmaCmd = new SQLiteCommand(pragmaSql, connection))
+                using (var reader = pragmaCmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        if (string.Equals(reader.GetString(1), sanitizedColumn, StringComparison.OrdinalIgnoreCase))
+                        {
+                            columnExists = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!columnExists)
+                    return null;
+
+                var sql = $"SELECT [{sanitizedColumn}] FROM PartsData WHERE PartNumber = @partNumber LIMIT 1";
+                using (var command = new SQLiteCommand(sql, connection))
+                {
+                    command.Parameters.AddWithValue("@partNumber", partNumber);
+                    var result = command.ExecuteScalar();
+                    if (result != null && result != DBNull.Value)
+                    {
+                        return result.ToString();
+                    }
+                    return null;
+                }
+            }
+        }
+
+        /// <summary>
         /// Get count of imported part records
         /// </summary>
         public int GetPartDataCount()
@@ -542,6 +592,12 @@ namespace EasySnapApp.Data
                     }
                 }
 
+                // Add column for image field if mapped
+                if (mapping.ImageColumnIndex >= 0 && mapping.ImageColumnIndex < headers.Count)
+                {
+                    _database.AddPartsDataColumn(headers[mapping.ImageColumnIndex]);
+                }
+
                 // Add columns for additional selected fields
                 foreach (var columnIndex in mapping.AdditionalColumnIndexes)
                 {
@@ -582,6 +638,14 @@ namespace EasySnapApp.Data
             if (mapping.DescriptionColumnIndex >= 0 && mapping.DescriptionColumnIndex < values.Count)
             {
                 record.Description = values[mapping.DescriptionColumnIndex]?.Trim();
+            }
+
+            // Map image column (stored as additional column in the database)
+            if (mapping.ImageColumnIndex >= 0 && mapping.ImageColumnIndex < values.Count && mapping.ImageColumnIndex < headers.Count)
+            {
+                var columnName = headers[mapping.ImageColumnIndex];
+                var columnValue = values[mapping.ImageColumnIndex]?.Trim();
+                record.AdditionalColumns[columnName] = columnValue;
             }
 
             // Map additional columns

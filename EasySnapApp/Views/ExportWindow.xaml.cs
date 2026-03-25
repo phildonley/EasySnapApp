@@ -48,11 +48,11 @@ namespace EasySnapApp.Views
         public string FileName => Path.GetFileName(_capturedImage.FullPath);
         public string FileSizeMB => $"{_capturedImage.FileSizeBytes / (1024.0 * 1024.0):F1} MB";
         public string DisplayName => $"{_capturedImage.PartNumber}.{_capturedImage.Sequence:000}";
-        public string DimensionsDisplay => 
+        public string DimensionsDisplay =>
             _capturedImage.DimX.HasValue || _capturedImage.DimY.HasValue || _capturedImage.DimZ.HasValue
-                ? $"{_capturedImage.DimX?.ToString("F2") ?? "?"}×{_capturedImage.DimY?.ToString("F2") ?? "?"}×{_capturedImage.DimZ?.ToString("F2") ?? "?"}"
+                ? $"{(_capturedImage.DimX.HasValue ? (_capturedImage.DimX.Value / 25.4).ToString("F2") : "?")}×{(_capturedImage.DimY.HasValue ? (_capturedImage.DimY.Value / 25.4).ToString("F2") : "?")}×{(_capturedImage.DimZ.HasValue ? (_capturedImage.DimZ.Value / 25.4).ToString("F2") : "?")}"
                 : "N/A";
-        
+
         public double? Weight => _capturedImage.WeightGrams.HasValue 
             ? _capturedImage.WeightGrams.Value * 0.00220462 // Convert grams to pounds
             : null;
@@ -302,6 +302,17 @@ namespace EasySnapApp.Views
                 
                 if (success)
                 {
+                    // Mark exported images in the database
+                    try
+                    {
+                        var exportedPartNumbers = selectedWrappers.Select(w => w.PartNumber).Distinct().ToList();
+                        _repository.MarkImagesExported(exportedPartNumbers, DateTime.UtcNow);
+                    }
+                    catch (Exception markEx)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Failed to mark images as exported: {markEx.Message}");
+                    }
+
                     MessageBox.Show($"Export completed successfully!\n\nImages exported to: {options.OutputFolder}", 
                         "Export Complete", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
@@ -377,6 +388,17 @@ namespace EasySnapApp.Views
 
                 // Export dimensions CSV with DIMS settings
                 ExportDimensionsCsvWithSettings(imagesToExport, csvPath, dimsSettings);
+
+                // Mark exported images in the database
+                try
+                {
+                    var exportedPartNumbers = imagesToExport.Select(i => i.PartNumber).Distinct().ToList();
+                    _repository.MarkImagesExported(exportedPartNumbers, DateTime.UtcNow);
+                }
+                catch (Exception markEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Failed to mark images as exported: {markEx.Message}");
+                }
 
                 var partCount = imagesToExport.GroupBy(i => i.PartNumber).Count();
                 MessageBox.Show($"DIMS export completed successfully!\n\nFile: {csvFileName}\nLocation: {txtOutputFolder.Text}\n\nExported: {imagesToExport.Count} images from {partCount} parts", 
@@ -479,7 +501,7 @@ namespace EasySnapApp.Views
                     var fileSizeMB = $"{image.FileSizeBytes / (1024.0 * 1024.0):F1} MB";
                     var weight = image.WeightGrams.HasValue ? $"{image.WeightGrams.Value * 0.00220462:F2} lb" : "N/A";
                     var dimensions = (image.DimX.HasValue || image.DimY.HasValue || image.DimZ.HasValue)
-                        ? $"{image.DimX?.ToString("F2") ?? "?"}×{image.DimY?.ToString("F2") ?? "?"}×{image.DimZ?.ToString("F2") ?? "?"}"
+                        ? $"{(image.DimX.HasValue ? (image.DimX.Value / 25.4).ToString("F2") : "?")}×{(image.DimY.HasValue ? (image.DimY.Value / 25.4).ToString("F2") : "?")}×{(image.DimZ.HasValue ? (image.DimZ.Value / 25.4).ToString("F2") : "?")}"
                         : "N/A";
                     
                     lblPreviewMetadata.Text = $"{Path.GetFileName(image.FullPath)}\n" +
@@ -542,32 +564,49 @@ namespace EasySnapApp.Views
         private void ExportDimensionsCsvWithSettings(List<CapturedImage> images, string csvPath, DimsExportSettings settings)
         {
             var csv = new StringBuilder();
-            
-            // DIMS CSV Header (25 columns matching template)
-            csv.AppendLine("SITE_ID,ITEM_ID,NET_LENGTH,NET_WIDTH,NET_HEIGHT,NET_WEIGHT,NET_VOLUME,NET_DIM_WGT," +
-                          "GROSS_LENGTH,GROSS_WIDTH,GROSS_HEIGHT,GROSS_WEIGHT,GROSS_VOLUME,GROSS_DIM_WGT," +
-                          "DIM_UNIT,WGT_UNIT,VOL_UNIT,FACTOR,OPT_INFO_1,OPT_INFO_2,OPT_INFO_3,OPT_INFO_4," +
-                          "OPT_INFO_5,OPT_INFO_6,OPT_INFO_7,OPT_INFO_8,TIME_STAMP,IMAGE_FILE_NAME,UPDATED");
-            
+
+            // DIMS CSV Header (25 columns matching standard template)
+            csv.AppendLine("ITEM_ID,ITEM_TYPE,DESCRIPTION,NET_LENGTH,NET_WIDTH,NET_HEIGHT,NET_WEIGHT,NET_VOLUME,NET_DIM_WGT," +
+                          "DIM_UNIT,WGT_UNIT,VOL_UNIT,FACTOR,SITE_ID,TIME_STAMP," +
+                          "OPT_INFO_1,OPT_INFO_2,OPT_INFO_3,OPT_INFO_4,OPT_INFO_5,OPT_INFO_6,OPT_INFO_7,OPT_INFO_8," +
+                          "IMAGE_FILE_NAME,UPDATED");
+
             foreach (var image in images.OrderBy(i => i.PartNumber).ThenBy(i => i.Sequence))
             {
                 // Derived fields from capture data
                 var itemId = image.PartNumber ?? "";
-                var netLength = image.DimX?.ToString("F4", CultureInfo.InvariantCulture) ?? "";
-                var netWidth = image.DimY?.ToString("F4", CultureInfo.InvariantCulture) ?? "";
-                var netHeight = image.DimZ?.ToString("F4", CultureInfo.InvariantCulture) ?? "";
-                var netWeight = image.WeightGrams.HasValue 
-                    ? (image.WeightGrams.Value * 0.00220462).ToString("F4", CultureInfo.InvariantCulture) // Convert g to lb
+
+                // DB stores dimensions in mm — convert based on DimUnit setting
+                double dimDivisor = 1.0; // default: mm (no conversion)
+                if (string.Equals(settings.DimUnit, "in", StringComparison.OrdinalIgnoreCase))
+                    dimDivisor = 25.4;   // mm → inches
+                else if (string.Equals(settings.DimUnit, "cm", StringComparison.OrdinalIgnoreCase))
+                    dimDivisor = 10.0;   // mm → cm
+
+                // DB stores weight in grams — convert based on WgtUnit setting
+                double wgtMultiplier = 1.0; // default: grams (no conversion)
+                if (string.Equals(settings.WgtUnit, "lb", StringComparison.OrdinalIgnoreCase))
+                    wgtMultiplier = 0.00220462;  // g → lb
+                else if (string.Equals(settings.WgtUnit, "kg", StringComparison.OrdinalIgnoreCase))
+                    wgtMultiplier = 0.001;       // g → kg
+                else if (string.Equals(settings.WgtUnit, "oz", StringComparison.OrdinalIgnoreCase))
+                    wgtMultiplier = 0.035274;    // g → oz
+
+                var netLength = image.DimX.HasValue ? (image.DimX.Value / dimDivisor).ToString("F4", CultureInfo.InvariantCulture) : "";
+                var netWidth = image.DimY.HasValue ? (image.DimY.Value / dimDivisor).ToString("F4", CultureInfo.InvariantCulture) : "";
+                var netHeight = image.DimZ.HasValue ? (image.DimZ.Value / dimDivisor).ToString("F4", CultureInfo.InvariantCulture) : "";
+                var netWeight = image.WeightGrams.HasValue
+                    ? (image.WeightGrams.Value * wgtMultiplier).ToString("F4", CultureInfo.InvariantCulture)
                     : "";
-                    
-                // Calculate NET_VOLUME (L × W × H) if all dimensions present
+
+                // Calculate NET_VOLUME (L × W × H) using converted values
                 var netVolume = "";
                 if (image.DimX.HasValue && image.DimY.HasValue && image.DimZ.HasValue)
                 {
-                    var volume = image.DimX.Value * image.DimY.Value * image.DimZ.Value;
+                    var volume = (image.DimX.Value / dimDivisor) * (image.DimY.Value / dimDivisor) * (image.DimZ.Value / dimDivisor);
                     netVolume = volume.ToString("F4", CultureInfo.InvariantCulture);
                 }
-                
+
                 // Calculate NET_DIM_WGT (NET_VOLUME / FACTOR) if volume present
                 var netDimWgt = "";
                 if (!string.IsNullOrEmpty(netVolume) && double.TryParse(settings.Factor, out var factor) && factor > 0)
@@ -578,41 +617,37 @@ namespace EasySnapApp.Views
                 
                 var timeStamp = image.CaptureTimeUtc.ToString("MM/dd/yyyy", CultureInfo.InvariantCulture);
                 var imageFileName = Path.GetFileName(image.FullPath) ?? "";
-                
-                // Build CSV row with all 25 columns + 3 additional (28 total)
+
+                // Build CSV row (25 columns matching header)
                 var csvRow = string.Join(",", new string[]
                 {
-                    settings.SiteId ?? "733",                    // SITE_ID
-                    $"\"{itemId}\"",                          // ITEM_ID
+                    $"\"{itemId}\"",                             // ITEM_ID
+                    "",                                          // ITEM_TYPE (empty - not tracked)
+                    "",                                          // DESCRIPTION (empty - not tracked)
                     netLength,                                   // NET_LENGTH
                     netWidth,                                    // NET_WIDTH
                     netHeight,                                   // NET_HEIGHT
                     netWeight,                                   // NET_WEIGHT
                     netVolume,                                   // NET_VOLUME
                     netDimWgt,                                   // NET_DIM_WGT
-                    "",                                          // GROSS_LENGTH (empty)
-                    "",                                          // GROSS_WIDTH (empty)
-                    "",                                          // GROSS_HEIGHT (empty)
-                    "",                                          // GROSS_WEIGHT (empty)
-                    "",                                          // GROSS_VOLUME (empty)
-                    "",                                          // GROSS_DIM_WGT (empty)
                     settings.DimUnit ?? "in",                   // DIM_UNIT
                     settings.WgtUnit ?? "lb",                   // WGT_UNIT
                     settings.VolUnit ?? "in",                   // VOL_UNIT
                     settings.Factor ?? "166",                   // FACTOR
-                    "",                                          // OPT_INFO_1 (empty)
+                    settings.SiteId ?? "733",                   // SITE_ID
+                    timeStamp,                                   // TIME_STAMP
+                    settings.OptInfo1 ?? "",                    // OPT_INFO_1
                     settings.OptInfo2 ?? "Y",                   // OPT_INFO_2
                     settings.OptInfo3 ?? "Y",                   // OPT_INFO_3
-                    "",                                          // OPT_INFO_4 (empty)
-                    "",                                          // OPT_INFO_5 (empty)
-                    "",                                          // OPT_INFO_6 (empty)
-                    "",                                          // OPT_INFO_7 (empty)
+                    settings.OptInfo4 ?? "",                    // OPT_INFO_4
+                    settings.OptInfo5 ?? "",                    // OPT_INFO_5
+                    settings.OptInfo6 ?? "",                    // OPT_INFO_6
+                    settings.OptInfo7 ?? "",                    // OPT_INFO_7
                     settings.OptInfo8 ?? "0",                   // OPT_INFO_8
-                    timeStamp,                                   // TIME_STAMP
-                    $"\"{imageFileName}\"",                   // IMAGE_FILE_NAME
+                    $"\"{imageFileName}\"",                     // IMAGE_FILE_NAME
                     settings.Updated ?? "N"                     // UPDATED
                 });
-                
+
                 csv.AppendLine(csvRow);
             }
 
@@ -631,12 +666,12 @@ namespace EasySnapApp.Views
             
             foreach (var image in images.OrderBy(i => i.PartNumber).ThenBy(i => i.Sequence))
             {
-                // Map DimX/Y/Z to Length/Width/Height
-                var length = image.DimX?.ToString("F2") ?? "";
-                var width = image.DimY?.ToString("F2") ?? "";  
-                var height = image.DimZ?.ToString("F2") ?? "";
+                // Map DimX/Y/Z to Length/Width/Height (DB stores mm, convert to inches)
+                var length = image.DimX.HasValue ? (image.DimX.Value / 25.4).ToString("F2") : "";
+                var width = image.DimY.HasValue ? (image.DimY.Value / 25.4).ToString("F2") : "";
+                var height = image.DimZ.HasValue ? (image.DimZ.Value / 25.4).ToString("F2") : "";
                 var weight = image.WeightGrams.HasValue ? (image.WeightGrams.Value * 0.00220462).ToString("F2") : "";
-                
+
                 csv.AppendLine($"\"{image.PartNumber}\",{image.Sequence},{image.CaptureTimeUtc:yyyy-MM-dd HH:mm:ss}," +
                               $"{weight},{length},{width},{height},\"{Path.GetFileName(image.FullPath)}\"");
             }

@@ -255,6 +255,7 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
@@ -294,10 +295,21 @@
                                           SelectionChanged="ColumnMapping_SelectionChanged"/>
                             </Grid>
 
-                            <Separator Grid.Row="4" Margin="0,8,0,8"/>
+                            <!-- Image Column -->
+                            <Grid Grid.Row="4" Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Image Column:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <ComboBox x:Name="ImageColumnComboBox" Grid.Column="1" 
+                                          SelectionChanged="ColumnMapping_SelectionChanged"/>
+                            </Grid>
+
+                            <Separator Grid.Row="5" Margin="0,8,0,8"/>
 
                             <!-- Additional Columns -->
-                            <ScrollViewer Grid.Row="5" Style="{StaticResource ModernScrollViewer}" Margin="0,0,0,8">
+                            <ScrollViewer Grid.Row="6" Style="{StaticResource ModernScrollViewer}" Margin="0,0,0,8">
                                 <StackPanel>
                                     <TextBlock Text="Additional Columns (Optional)" FontWeight="Bold" Margin="0,0,0,8"/>
                                     <TextBox x:Name="ColumnSearchTextBox" 
@@ -325,7 +337,7 @@
                             </ScrollViewer>
 
                             <!-- Selection Summary -->
-                            <TextBlock x:Name="SelectionSummaryTextBlock" Grid.Row="6" 
+                            <TextBlock x:Name="SelectionSummaryTextBlock" Grid.Row="7" 
                                        Text="Select required columns to continue"
                                        Foreground="#CCCCCC" FontSize="11" TextWrapping="Wrap"/>
                         </Grid>

@@ -277,6 +277,66 @@ namespace EasySnapApp.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string DimsOptInfo1 {
+            get {
+                return ((string)(this["DimsOptInfo1"]));
+            }
+            set {
+                this["DimsOptInfo1"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string DimsOptInfo4 {
+            get {
+                return ((string)(this["DimsOptInfo4"]));
+            }
+            set {
+                this["DimsOptInfo4"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string DimsOptInfo5 {
+            get {
+                return ((string)(this["DimsOptInfo5"]));
+            }
+            set {
+                this["DimsOptInfo5"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string DimsOptInfo6 {
+            get {
+                return ((string)(this["DimsOptInfo6"]));
+            }
+            set {
+                this["DimsOptInfo6"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string DimsOptInfo7 {
+            get {
+                return ((string)(this["DimsOptInfo7"]));
+            }
+            set {
+                this["DimsOptInfo7"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
         public bool AutoCollapseParts {
             get {
@@ -344,6 +404,18 @@ namespace EasySnapApp.Properties {
             }
             set {
                 this["SequencePadding"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string DimsImageColumnName {
+            get {
+                return ((string)(this["DimsImageColumnName"]));
+            }
+            set {
+                this["DimsImageColumnName"] = value;
             }
         }
     }

@@ -12,8 +12,13 @@ namespace EasySnapApp.Models
         public string DimUnit { get; set; } = "in";
         public string WgtUnit { get; set; } = "lb";
         public string VolUnit { get; set; } = "in";
+        public string OptInfo1 { get; set; } = "";
         public string OptInfo2 { get; set; } = "Y";
         public string OptInfo3 { get; set; } = "Y";
+        public string OptInfo4 { get; set; } = "";
+        public string OptInfo5 { get; set; } = "";
+        public string OptInfo6 { get; set; } = "";
+        public string OptInfo7 { get; set; } = "";
         public string OptInfo8 { get; set; } = "0";
         public string Updated { get; set; } = "N";
         public bool EnableOverride { get; set; } = true;
@@ -29,12 +34,17 @@ namespace EasySnapApp.Models
                 return new DimsExportSettings
                 {
                     SiteId = settings.DimsSiteId ?? "733",
-                    Factor = settings.DimsFactor ?? "166", 
+                    Factor = settings.DimsFactor ?? "166",
                     DimUnit = settings.DimsDimUnit ?? "in",
                     WgtUnit = settings.DimsWgtUnit ?? "lb",
                     VolUnit = settings.DimsVolUnit ?? "in",
+                    OptInfo1 = settings.DimsOptInfo1 ?? "",
                     OptInfo2 = settings.DimsOptInfo2 ?? "Y",
-                    OptInfo3 = settings.DimsOptInfo3 ?? "Y", 
+                    OptInfo3 = settings.DimsOptInfo3 ?? "Y",
+                    OptInfo4 = settings.DimsOptInfo4 ?? "",
+                    OptInfo5 = settings.DimsOptInfo5 ?? "",
+                    OptInfo6 = settings.DimsOptInfo6 ?? "",
+                    OptInfo7 = settings.DimsOptInfo7 ?? "",
                     OptInfo8 = settings.DimsOptInfo8 ?? "0",
                     Updated = settings.DimsUpdated ?? "N",
                     EnableOverride = settings.DimsEnableOverride
@@ -57,11 +67,16 @@ namespace EasySnapApp.Models
                 var settings = Properties.Settings.Default;
                 settings.DimsSiteId = SiteId ?? "733";
                 settings.DimsFactor = Factor ?? "166";
-                settings.DimsDimUnit = DimUnit ?? "in"; 
+                settings.DimsDimUnit = DimUnit ?? "in";
                 settings.DimsWgtUnit = WgtUnit ?? "lb";
                 settings.DimsVolUnit = VolUnit ?? "in";
+                settings.DimsOptInfo1 = OptInfo1 ?? "";
                 settings.DimsOptInfo2 = OptInfo2 ?? "Y";
                 settings.DimsOptInfo3 = OptInfo3 ?? "Y";
+                settings.DimsOptInfo4 = OptInfo4 ?? "";
+                settings.DimsOptInfo5 = OptInfo5 ?? "";
+                settings.DimsOptInfo6 = OptInfo6 ?? "";
+                settings.DimsOptInfo7 = OptInfo7 ?? "";
                 settings.DimsOptInfo8 = OptInfo8 ?? "0";
                 settings.DimsUpdated = Updated ?? "N";
                 settings.DimsEnableOverride = EnableOverride;

@@ -1151,6 +1151,89 @@ namespace EasySnapApp
                 return;
             }
 
+            // CHECK: Does this part already have captured images?
+            if (_repository != null)
+            {
+                try
+                {
+                    var warningLines = new List<string>();
+
+                    // Check imported PartsData for existing images
+                    var imageColumnName = Properties.Settings.Default.DimsImageColumnName;
+                    if (!string.IsNullOrEmpty(imageColumnName) && _partsRepository != null)
+                    {
+                        var existingImageValue = _partsRepository.GetColumnValueForPart(part, imageColumnName);
+                        if (!string.IsNullOrEmpty(existingImageValue))
+                        {
+                            warningLines.Add("The imported database indicates there are already photos for this SKU.");
+                        }
+                    }
+
+                    // Check EasySnap capture history (includes deleted/cleared images)
+                    var historicalCount = _repository.GetHistoricalImageCount(part);
+                    var lastCaptureDate = _repository.GetLastCaptureDate(part);
+
+                    if (historicalCount > 0 && lastCaptureDate.HasValue)
+                    {
+                        warningLines.Add($"This part was last photographed in EasySnap on {lastCaptureDate.Value:MM/dd/yyyy} ({historicalCount} capture{(historicalCount == 1 ? "" : "s")}).");
+                    }
+
+                    if (warningLines.Count > 0)
+                    {
+                        var tmsId = _partsRepository?.GetTmsIdForPart(part);
+                        var tmsInfo = !string.IsNullOrEmpty(tmsId) ? $"\nTMS ID: {tmsId}" : "";
+
+                        var warningMessage = string.Join("\n\n", warningLines) + tmsInfo +
+                            "\n\nWould you like to continue?";
+
+                        var result = MessageBox.Show(
+                            warningMessage,
+                            "Part Already Has Images",
+                            MessageBoxButton.YesNo,
+                            MessageBoxImage.Question,
+                            MessageBoxResult.No);
+
+                        if (result == MessageBoxResult.No)
+                        {
+                            LogSessionMessage($"User skipped reshoot for {part} ({historicalCount} historical captures)");
+                            StatusTextBlock.Text = $"Skipped part {part} — keeping existing images.";
+                            return;
+                        }
+
+                        LogSessionMessage($"User chose to reshoot {part} ({historicalCount} historical captures)");
+
+                        // If we have existing dims/weight in memory, ask if they want to keep them
+                        if (_partData.TryGetValue(part, out var existingPd) &&
+                            (existingPd.LengthIn.HasValue || existingPd.WidthIn.HasValue ||
+                             existingPd.HeightIn.HasValue || existingPd.WeightLb.HasValue))
+                        {
+                            var keepDims = MessageBox.Show(
+                                "This part has existing dimensions and/or weight on record.\n\n" +
+                                "Would you like to keep the previously recorded dimensions and weight?",
+                                "Keep Existing Measurements?",
+                                MessageBoxButton.YesNo,
+                                MessageBoxImage.Question,
+                                MessageBoxResult.Yes);
+
+                            if (keepDims == MessageBoxResult.No)
+                            {
+                                _partData.Remove(part);
+                                LogSessionMessage($"User cleared existing dims/weight for {part}");
+                            }
+                            else
+                            {
+                                LogSessionMessage($"User kept existing dims/weight for {part}");
+                            }
+                        }
+                    }
+                }
+                catch (Exception checkEx)
+                {
+                    LogSessionMessage($"Warning: Could not check existing images: {checkEx.Message}");
+                    // Continue anyway — don't block workflow over a check failure
+                }
+            }
+
             LogSessionMessage("Starting new session...");
             _sessionManager.StartNewSession(part);
             // DON'T clear results - keep previous parts visible
@@ -1703,7 +1786,53 @@ namespace EasySnapApp
         {
             UndoLastDelete();
         }
-        
+
+        private void ClearExportedImages_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var exportedImages = _repository.GetExportedImages();
+                if (exportedImages == null || exportedImages.Count == 0)
+                {
+                    MessageBox.Show("No exported images to clear.", "Nothing to Clear",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                var totalSizeMb = exportedImages.Sum(i => i.FileSizeBytes) / (1024.0 * 1024.0);
+                var partCount = exportedImages.Select(i => i.PartNumber).Distinct().Count();
+
+                var result = MessageBox.Show(
+                    $"You are about to delete {exportedImages.Count} exported image{(exportedImages.Count == 1 ? "" : "s")} " +
+                    $"from {partCount} part{(partCount == 1 ? "" : "s")}.\n\n" +
+                    $"This will free up approximately {totalSizeMb:F1} MB of disk space.\n\n" +
+                    $"This action cannot be undone. Continue?",
+                    "Clear Exported Images",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning,
+                    MessageBoxResult.No);
+
+                if (result == MessageBoxResult.No)
+                    return;
+
+                var imageIds = exportedImages.Select(i => i.ImageId).ToList();
+                _repository.SoftDeleteCaptures(imageIds, msg => LogSessionMessage(msg));
+
+                // Refresh the UI
+                if (!string.IsNullOrEmpty(_currentPartNumber))
+                    LoadImagesFromDatabase(_currentPartNumber);
+
+                StatusTextBlock.Text = $"Cleared {exportedImages.Count} exported images ({totalSizeMb:F1} MB freed).";
+                LogSessionMessage($"Cleared {exportedImages.Count} exported images from {partCount} parts ({totalSizeMb:F1} MB)");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error clearing exported images: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                LogSessionMessage($"Clear exported images failed: {ex.Message}");
+            }
+        }
+
         private void Exit_Click(object sender, RoutedEventArgs e)
         {
             // Dispose camera service properly

@@ -256,11 +256,13 @@ namespace EasySnapApp.Views
             ConnectionKeyColumnComboBox.Items.Clear();
             TmsIdColumnComboBox.Items.Clear();
             DisplayNameColumnComboBox.Items.Clear();
+            ImageColumnComboBox.Items.Clear();
 
             // Add "Not Selected" option for optional columns
             ConnectionKeyColumnComboBox.Items.Add("(Select Column)");
             TmsIdColumnComboBox.Items.Add("(Not Selected)");
             DisplayNameColumnComboBox.Items.Add("(Not Selected)");
+            ImageColumnComboBox.Items.Add("(Not Selected)");
 
             // Populate all columns
             for (int i = 0; i < _currentPreviewData.Headers.Count; i++)
@@ -272,6 +274,7 @@ namespace EasySnapApp.Views
                 ConnectionKeyColumnComboBox.Items.Add($"{i}: {displayName}");
                 TmsIdColumnComboBox.Items.Add($"{i}: {displayName}");
                 DisplayNameColumnComboBox.Items.Add($"{i}: {displayName}");
+                ImageColumnComboBox.Items.Add($"{i}: {displayName}");
 
                 // Add to additional columns list
                 _availableColumns.Add(new ColumnSelectionItem
@@ -337,6 +340,20 @@ namespace EasySnapApp.Views
                     break;
                 }
             }
+
+            // Auto-detect Image column (look for "image", "images", "photo", "picture")
+            for (int i = 0; i < _currentPreviewData.Headers.Count; i++)
+            {
+                var header = _currentPreviewData.Headers[i]?.ToLower() ?? "";
+
+                if (header == "images" || header == "image" || header == "photo" ||
+                    header == "picture" || header == "image_url" || header == "image_path")
+                {
+                    ImageColumnComboBox.SelectedIndex = i + 1; // +1 for "(Not Selected)" option
+                    LogMessage($"Auto-detected Image column: {_currentPreviewData.Headers[i]}");
+                    break;
+                }
+            }
         }
 
         private void ColumnMapping_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -395,6 +412,20 @@ namespace EasySnapApp.Views
                 _currentMapping.DisplayNameColumnIndex = DisplayNameColumnComboBox.SelectedIndex - 1;
             }
 
+            // Image Column (optional) — saves column name to settings for lookup later
+            if (ImageColumnComboBox.SelectedIndex > 0)
+            {
+                _currentMapping.ImageColumnIndex = ImageColumnComboBox.SelectedIndex - 1;
+
+                // Save the column name so MainWindow can look it up later
+                if (_currentPreviewData?.Headers != null && _currentMapping.ImageColumnIndex < _currentPreviewData.Headers.Count)
+                {
+                    var imageColName = _currentPreviewData.Headers[_currentMapping.ImageColumnIndex];
+                    Properties.Settings.Default.DimsImageColumnName = imageColName;
+                    Properties.Settings.Default.Save();
+                }
+            }
+
             // Additional columns
             _currentMapping.AdditionalColumnIndexes = _availableColumns
                 .Where(c => c.IsSelected)
@@ -441,6 +472,12 @@ namespace EasySnapApp.Views
             if (_currentMapping.DisplayNameColumnIndex >= 0)
             {
                 summaryParts.Add("Display Name");
+                selectedCount++;
+            }
+
+            if (_currentMapping.ImageColumnIndex >= 0)
+            {
+                summaryParts.Add("Image Column");
                 selectedCount++;
             }
 
@@ -525,6 +562,7 @@ namespace EasySnapApp.Views
                 var totalColumns = _currentMapping.AdditionalColumnIndexes.Count;
                 if (_currentMapping.TmsIdColumnIndex >= 0) totalColumns++;
                 if (_currentMapping.DisplayNameColumnIndex >= 0) totalColumns++;
+                if (_currentMapping.ImageColumnIndex >= 0) totalColumns++;
                 totalColumns++; // Part number
 
                 var estimatedTime = EstimateImportTime(_currentPreviewData.TotalRowCount, totalColumns);
@@ -703,6 +741,7 @@ namespace EasySnapApp.Views
             ConnectionKeyColumnComboBox.Items.Clear();
             TmsIdColumnComboBox.Items.Clear();
             DisplayNameColumnComboBox.Items.Clear();
+            ImageColumnComboBox.Items.Clear();
 
             _availableColumns.Clear();
             _filteredColumns.Clear();

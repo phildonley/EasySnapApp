@@ -93,6 +93,8 @@ namespace EasySnapApp.Data
 
                 // SOFT DELETE: Add DeletedAt column migration (safe to run repeatedly)
                 AddDeletedAtColumnIfNeeded(connection);
+                // EXPORT TRACKING: Add LastExportedAt column migration
+                AddLastExportedAtColumnIfNeeded(connection);
                 CreatePartsDataTable(connection);
             }
         }
@@ -138,6 +140,29 @@ namespace EasySnapApp.Data
             {
                 System.Diagnostics.Debug.WriteLine($"SoftDelete: Migration error: {ex.Message}");
                 // Don't throw - app should continue working even if migration fails
+            }
+        }
+
+        /// <summary>
+        /// Add LastExportedAt column to CapturedImages if it doesn't exist (export tracking migration)
+        /// </summary>
+        private void AddLastExportedAtColumnIfNeeded(SQLiteConnection connection)
+        {
+            try
+            {
+                if (!ColumnExists(connection, "CapturedImages", "LastExportedAt"))
+                {
+                    var addColumnSql = "ALTER TABLE CapturedImages ADD COLUMN LastExportedAt TEXT NULL";
+                    using (var command = new SQLiteCommand(addColumnSql, connection))
+                    {
+                        command.ExecuteNonQuery();
+                    }
+                    System.Diagnostics.Debug.WriteLine("ExportTracking: Added LastExportedAt column to CapturedImages table");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ExportTracking: Migration error: {ex.Message}");
             }
         }
 

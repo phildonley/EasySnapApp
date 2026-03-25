@@ -36,6 +36,7 @@ namespace EasySnapApp.Data
         public double? DimZ { get; set; }
         public bool IsDeleted { get; set; }
         public DateTime? DeletedAt { get; set; }
+        public DateTime? LastExportedAt { get; set; }
     }
 
     /// <summary>
@@ -248,6 +249,143 @@ namespace EasySnapApp.Data
             }
 
             return images;
+        }
+
+        /// <summary>
+        /// Check if a part has EVER been photographed, including cleared/deleted captures.
+        /// Used to warn the user before reshooting a part that already has images on record.
+        /// </summary>
+        public int GetHistoricalImageCount(string partNumber)
+        {
+            using (var connection = _database.GetConnection())
+            {
+                connection.Open();
+
+                var sql = "SELECT COUNT(*) FROM CapturedImages WHERE PartNumber = @partNumber";
+                using (var command = new SQLiteCommand(sql, connection))
+                {
+                    command.Parameters.AddWithValue("@partNumber", partNumber);
+                    return Convert.ToInt32(command.ExecuteScalar());
+                }
+            }
+        }
+
+        /// <summary>
+        /// Get the most recent capture date for a part (including deleted captures).
+        /// Returns null if the part has never been photographed.
+        /// </summary>
+        public DateTime? GetLastCaptureDate(string partNumber)
+        {
+            using (var connection = _database.GetConnection())
+            {
+                connection.Open();
+
+                var sql = "SELECT MAX(CaptureTimeUtc) FROM CapturedImages WHERE PartNumber = @partNumber";
+                using (var command = new SQLiteCommand(sql, connection))
+                {
+                    command.Parameters.AddWithValue("@partNumber", partNumber);
+                    var result = command.ExecuteScalar();
+                    if (result != null && result != DBNull.Value)
+                    {
+                        return DateTime.Parse(result.ToString());
+                    }
+                    return null;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Mark all non-deleted images for the given part numbers as exported.
+        /// Called after a successful DIMS or image export.
+        /// </summary>
+        public void MarkImagesExported(IEnumerable<string> partNumbers, DateTime exportedAt)
+        {
+            using (var connection = _database.GetConnection())
+            {
+                connection.Open();
+                using (var transaction = connection.BeginTransaction())
+                {
+                    try
+                    {
+                        foreach (var partNumber in partNumbers)
+                        {
+                            var sql = "UPDATE CapturedImages SET LastExportedAt = @exportedAt WHERE PartNumber = @partNumber AND IsDeleted = 0";
+                            using (var command = new SQLiteCommand(sql, connection, transaction))
+                            {
+                                command.Parameters.AddWithValue("@exportedAt", exportedAt.ToString("yyyy-MM-dd HH:mm:ss"));
+                                command.Parameters.AddWithValue("@partNumber", partNumber);
+                                command.ExecuteNonQuery();
+                            }
+                        }
+                        transaction.Commit();
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Get all non-deleted images that have been exported (LastExportedAt is not null).
+        /// Used for the "Clear Exported Images" feature.
+        /// </summary>
+        public List<CapturedImage> GetExportedImages()
+        {
+            var images = new List<CapturedImage>();
+
+            using (var connection = _database.GetConnection())
+            {
+                connection.Open();
+
+                var sql = @"SELECT ImageId, PartNumber, FullPath, ThumbPath, FileSizeBytes, LastExportedAt
+                            FROM CapturedImages
+                            WHERE IsDeleted = 0 AND LastExportedAt IS NOT NULL";
+
+                using (var command = new SQLiteCommand(sql, connection))
+                using (var reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        images.Add(new CapturedImage
+                        {
+                            ImageId = reader.GetString(0),
+                            PartNumber = reader.GetString(1),
+                            FullPath = reader.GetString(2),
+                            ThumbPath = reader.IsDBNull(3) ? null : reader.GetString(3),
+                            FileSizeBytes = reader.GetInt64(4),
+                            LastExportedAt = reader.IsDBNull(5) ? null : (DateTime?)DateTime.Parse(reader.GetString(5))
+                        });
+                    }
+                }
+            }
+
+            return images;
+        }
+
+        /// <summary>
+        /// Get count of non-deleted images that have NOT been exported yet.
+        /// </summary>
+        public int GetUnexportedImageCount(IEnumerable<string> imageIds)
+        {
+            using (var connection = _database.GetConnection())
+            {
+                connection.Open();
+
+                int count = 0;
+                foreach (var imageId in imageIds)
+                {
+                    var sql = "SELECT COUNT(*) FROM CapturedImages WHERE ImageId = @imageId AND LastExportedAt IS NULL AND IsDeleted = 0";
+                    using (var command = new SQLiteCommand(sql, connection))
+                    {
+                        command.Parameters.AddWithValue("@imageId", imageId);
+                        count += Convert.ToInt32(command.ExecuteScalar());
+                    }
+                }
+                return count;
+            }
         }
 
         /// <summary>
