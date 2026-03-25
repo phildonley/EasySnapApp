@@ -571,7 +571,13 @@ namespace EasySnapApp.Views
                           "OPT_INFO_1,OPT_INFO_2,OPT_INFO_3,OPT_INFO_4,OPT_INFO_5,OPT_INFO_6,OPT_INFO_7,OPT_INFO_8," +
                           "IMAGE_FILE_NAME,UPDATED");
 
-            foreach (var image in images.OrderBy(i => i.PartNumber).ThenBy(i => i.Sequence))
+            // Group by part number — export one row per part, not one per image
+            var uniqueParts = images
+                .GroupBy(i => i.PartNumber, StringComparer.OrdinalIgnoreCase)
+                .Select(g => g.OrderBy(i => i.Sequence).First())
+                .OrderBy(i => i.PartNumber);
+
+            foreach (var image in uniqueParts)
             {
                 // Derived fields from capture data
                 var itemId = image.PartNumber ?? "";
